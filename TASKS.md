@@ -6,7 +6,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
 
 ## Vertical slice (run this first)
 
-- [ ] **T00 — Playable encounter demo (offline, hardcoded)**
+- [x] **T00 — Playable encounter demo (offline, hardcoded)**
   - Goal: prove the study tool works before spending more. One real subsection, offline tutor, full encounter UI. No vault, no Phaser world changes needed beyond a single trigger zone.
   - **Hardcoded subsection** — create `src/data/demoSubsection.js`:
     ```js
