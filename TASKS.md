@@ -4,6 +4,32 @@ The overnight agent works through these **in order**, one per session. It ticks 
 
 Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
 
+## Vertical slice (run this first)
+
+- [ ] **T00 — Playable encounter demo (offline, hardcoded)**
+  - Goal: prove the study tool works before spending more. One real subsection, offline tutor, full encounter UI. No vault, no Phaser world changes needed beyond a single trigger zone.
+  - **Hardcoded subsection** — create `src/data/demoSubsection.js`:
+    ```js
+    export const demoSubsection = {
+      id: 'contract-offer-acceptance',
+      title: 'Offer & Acceptance',
+      module: 'Contract Law',
+      keyConcepts: ['offer','invitation to treat','acceptance','communication of acceptance','postal rule','revocation'],
+      keyCases: ['Carlill v Carbolic Smoke Ball Co [1893]','Hyde v Wrench [1840]','Harvey v Facey [1893]','Pharmaceutical Society v Boots [1953]','Fisher v Bell [1961]','Adams v Lindsell [1818]','Byrne v Van Tienhoven [1880]','Entores v Miles Far East [1955]'],
+      statutes: ['Sale of Goods Act 1979 s.57'],
+      prerequisites: [],
+    }
+    ```
+  - **Offline bank** — create `src/data/offlineBank.js` with a full 7-stage bank for `contract-offer-acceptance`. Each stage entry: `{ prompt, modelAnswer, hints: [string, string], cases: [{name, ratio, whyItMatters}], evaluation(answer) → {verdict, feedback, conceptsHit, conceptsMissed, followUp?} }`. Write real law: ratios, distinctions, IRAC structure. Stage 7 is a scenario: *"A supermarket displays tins of beans priced 50p. Alice picks one up. Bob, the manager, says 'sorry, that's mispriced.' Has a contract formed?"* — answer requires Fisher v Bell, Pharmaceutical Society v Boots, and identifies the offer as Alice taking it to the till.
+  - **Encounter engine** — create `src/logic/encounter.js`: provider-agnostic state machine, stages 1–7. `createEncounter(subsection, tutorImpl)` → `{ next(), submit(answer), hint(), notSure(), ask(question), leave(), result() }`. Answers under 15 chars get a gentle rejection (not counted). Min 8 exchanges before any verdict. Follow-ups (max 2 per stage) when `partial`/`missing`. Consolidation: stages 3 and 5 both solid + checkpoint ≥ 2/3.
+  - **Offline tutor** — create `src/api/offlineTutor.js`: implements the tutor interface using the bank. Evaluation is keyword+concept overlap; feedback quotes the relevant case ratio when a case is missed.
+  - **Encounter UI** — create `src/ui/encounter.js` (DOM overlay, not Phaser): dark panel over the canvas, tutor name ("Professor Hale") + colour swatch, scrolling transcript div, multi-line textarea (Enter = submit, Shift+Enter = newline), buttons Submit / Hint / I'm not sure / Ask a question / Leave, stage pip row (●○○○○○○), offline badge. While open: disable Phaser keyboard captures so WASD and Space can be typed. On close: re-enable.
+  - **Trigger** — in `GameScene.js`: place a single grey rectangle labelled "Contract Law" near the player start. On overlap + E key: open the encounter with `demoSubsection` and the offline tutor.
+  - **Tests** — `tests/encounter.test.js`: cannot consolidate without answering; short answer rejected; hint does not leak model answer; leave mid-session returns `explored`; full solid run returns `consolidated`.
+  - **Settings stub** — create `src/settings.js` (get/set localStorage, try/catch) so later tasks can import it.
+  - Add `"test": "node --test"` to package.json.
+  - Done when: `npm run build` and `npm test` pass; `npm run dev` shows the green world; walking into the grey rectangle and pressing E opens a working encounter you can play to completion in offline mode.
+
 ## Core mechanics
 
 - [ ] **T01 — Fix foundations and add a test harness**
