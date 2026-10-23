@@ -2,7 +2,7 @@
 // Requires the "Local REST API" community plugin: https://github.com/coddingtonbear/obsidian-local-rest-api
 // Default base URL: http://127.0.0.1:27123
 
-const BASE_URL = import.meta.env.VITE_OBSIDIAN_BASE_URL || 'http://127.0.0.1:27123';
+const BASE_URL = '/obsidian';
 
 function headers() {
   const token = import.meta.env.VITE_OBSIDIAN_TOKEN;
