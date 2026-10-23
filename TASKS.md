@@ -32,7 +32,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
 
 ## Core mechanics
 
-- [ ] **T01 — Fix foundations and add a test harness**
+- [x] **T01 — Fix foundations and add a test harness**
   - `src/api/claude.js`: add header `anthropic-dangerous-direct-browser-access: true`; default model `claude-sonnet-5-5`; accept `{ system, messages, tools, maxTokens, model }`; return the full response (text blocks joined plus raw content). Key comes from settings (localStorage) first, `.env` only when `import.meta.env.DEV`.
   - `src/api/obsidian.js`: default base `https://127.0.0.1:27124`; settings-first config; add `listFiles()`; encode each path segment; `writeNote` must refuse any filename that does not start with `TUTOR-SESSION-` and must always refuse `LAW7054-Tort-Ch8-Breach-Standard-of-Care.md`.
   - Create `src/settings.js` (get/set settings in localStorage with try/catch).

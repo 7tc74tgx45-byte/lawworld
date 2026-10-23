@@ -58,3 +58,53 @@ For a quick consolidated run, give answers that name the concepts and cases (Hyd
 T05: promote `src/logic/encounter.js` with `priorGaps` and mock-tutor tests.
 
 T07: reuse `src/ui/encounter.js` and add the Settings overlay and a loading/error state for Claude calls.
+
+## T01 — done — 2026-10-24 00:52:03
+Cost $0.27 · 2 min · attempt 1
+
+**What changed:** T01 is finished. `npm run build` passes and `npm test` passes all 20 tests (13 existing, 7 new).
+
+**Claude client (`src/api/claude.js`)**
+- `callClaude({ system, messages, tools, maxTokens, model })` sends the `anthropic-dangerous-direct-browser-access: true` header.
+- The default model is `claude-sonnet-5-5`, overridable in Settings or per call.
+- It returns `{ text, content, raw }`: the text blocks joined, the raw content blocks, and the whole response body.
+- The key comes from Settings (localStorage) first. `VITE_CLAUDE_API_KEY` is read only when `import.meta.env.DEV` is true.
+- I kept `askClaude(prompt)` as a small wrapper that returns just the text.
+
+**Obsidian client (`src/api/obsidian.js`)**
+- The default base is `https://127.0.0.1:27124`, with URL and token read from Settings first and `.env` only in dev.
+- I added `listFiles()`, and each path segment is now encoded separately.
+- `writeNote` runs the guard before any config or network access.
+- I also added `testConnection()` for the Settings screen in T07.
+- `searchNotes` now uses POST, which is what the plugin's simple-search endpoint expects. The old GET would not have worked.
+
+**Write guard (`src/logic/noteGuard.js`, pure)**
+- A write is allowed only for a plain `TUTOR-SESSION-*.md` file in the vault root.
+- It always refuses `LAW7054-Tort-Ch8-Breach-Standard-of-Care.md`, including in upper case, inside a folder, or percent-encoded.
+- It also refuses folders, `..`, encoded traversal, non-strings and wrong extensions.
+- The same file holds `encodeVaultPath` and `normaliseBaseUrl`.
+- `tests/noteGuard.test.js` covers all of this.
+
+**Settings (`src/settings.js`)**
+- It already existed from T00. I added `getStoredSetting`, which returns only what Fynn saved and ignores defaults, so "Settings first, then `.env`" works.
+
+**Cleanup**
+- I deleted `src/counter.js`, `src/assets/*`, `src/style.css` and `public/icons.svg`. None of them were imported.
+- I removed the `/obsidian` dev proxy from `vite.config.js`, since the game now calls Obsidian directly.
+- I rewrote `.env.example` with the new `https://127.0.0.1:27124` default. I did not touch your local `.env`.
+- I linked `favicon.svg` in `index.html`.
+
+**README**
+- It now explains the settings, their order of precedence, the self-signed certificate step, and the write safety rule.
+
+`src/logic/` and `src/ui/` already existed from T00.
+
+**Try it:** —
+
+**Design notes:** - **Old `.env` values:** your `.env` may still hold the old `VITE_OBSIDIAN_BASE_URL=http://127.0.0.1:27123`. In dev it is used only when Settings has no URL, so update it or delete the line. Otherwise dev will point at the wrong port.
+- **Settings screen:** the Settings screen is T07. Until then the README shows a one-line console snippet to set the key and token in localStorage.
+- **Browser calls to Claude:** a Claude key stored in localStorage and called straight from the browser is fine for a personal local tool. Don't deploy this publicly with a key in it.
+- **Not tested here:** I could not test the real Obsidian or Claude calls from this session. The fetch code follows the documented APIs, but the first live run in T06/T07 may need small tweaks. For example, `listFiles` assumes the plugin returns `{ files: [...] }` for the vault root.
+- **Vault is flat:** the write guard allows only vault-root session notes, which matches that.
+
+**Next:** T02 should generate the curriculum from the vault. T05 should promote the encounter engine and add `priorGaps` plus mock-tutor tests. T07 should add the Settings overlay and use `testConnection()`.

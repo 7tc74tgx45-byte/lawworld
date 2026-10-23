@@ -30,6 +30,20 @@ export function getAllSettings() {
   }
 }
 
+/** The value the player actually saved, or undefined (ignores defaults). Used for "settings first, .env second". */
+export function getStoredSetting(name) {
+  const s = storage();
+  if (!s) return undefined;
+  try {
+    const raw = s.getItem(KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    const v = parsed && typeof parsed === 'object' ? parsed[name] : undefined;
+    return typeof v === 'string' && v.trim() === '' ? undefined : v;
+  } catch {
+    return undefined;
+  }
+}
+
 export function getSetting(name) {
   return getAllSettings()[name];
 }

@@ -1,14 +1,5 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig({
-  server: {
-    proxy: {
-      '/obsidian': {
-        target: 'https://localhost:27124',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/obsidian/, ''),
-        secure: false,
-      },
-    },
-  },
-});
+// The game talks to Obsidian (https://127.0.0.1:27124) and Claude directly from the browser,
+// so no dev proxy is needed. See README for the one-off self-signed certificate step.
+export default defineConfig({});

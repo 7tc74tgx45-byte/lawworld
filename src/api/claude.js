@@ -1,39 +1,77 @@
-// Claude API client
-// Docs: https://docs.anthropic.com/en/api/getting-started
+// Claude Messages API client (browser).
+// Docs: https://docs.anthropic.com/en/api/messages
+// The key comes from in-game Settings (localStorage) first. A .env key
+// (VITE_CLAUDE_API_KEY) is a dev-only fallback and is ignored in production builds.
 
-const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
+import { getSetting, getStoredSetting } from '../settings.js';
+
+export const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
+export const DEFAULT_MODEL = 'claude-sonnet-5-5';
+
+/** Resolve the API key: Settings first, then .env only when running the dev server. */
+export function getClaudeKey() {
+  const stored = getStoredSetting('claudeApiKey');
+  if (stored) return String(stored).trim();
+  if (import.meta.env?.DEV) return (import.meta.env.VITE_CLAUDE_API_KEY || '').trim();
+  return '';
+}
+
+/** Resolve the model: explicit option, then Settings, then the default. */
+export function getClaudeModel() {
+  return (getSetting('claudeModel') || '').trim() || DEFAULT_MODEL;
+}
 
 /**
- * Send a message to Claude and get a response.
- * @param {string} prompt - The user message to send.
- * @param {object} [options]
- * @param {string} [options.model='claude-opus-4-5'] - Claude model to use.
- * @param {number} [options.maxTokens=1024] - Max tokens to return.
- * @returns {Promise<string>} - The assistant's reply text.
+ * Call the Messages API.
+ * @param {object} req
+ * @param {string} [req.system] - System prompt.
+ * @param {Array<{role: 'user'|'assistant', content: string|Array}>} req.messages
+ * @param {Array<object>} [req.tools] - e.g. [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }]
+ * @param {number} [req.maxTokens=1024]
+ * @param {string} [req.model]
+ * @returns {Promise<{ text: string, content: Array, raw: object }>}
+ *   text: all text blocks joined; content: the raw content blocks; raw: the whole response body.
  */
-export async function askClaude(prompt, { model = 'claude-opus-4-5', maxTokens = 1024 } = {}) {
-  const apiKey = import.meta.env.VITE_CLAUDE_API_KEY;
-  if (!apiKey) throw new Error('VITE_CLAUDE_API_KEY is not set in .env');
+export async function callClaude({ system, messages, tools, maxTokens = 1024, model } = {}) {
+  if (!Array.isArray(messages) || messages.length === 0) {
+    throw new Error('callClaude needs a non-empty messages array.');
+  }
+  const apiKey = getClaudeKey();
+  if (!apiKey) {
+    throw new Error('No Claude API key. Add one in Settings (or VITE_CLAUDE_API_KEY in .env for local dev).');
+  }
+
+  const body = { model: model || getClaudeModel(), max_tokens: maxTokens, messages };
+  if (system) body.system = system;
+  if (tools && tools.length) body.tools = tools;
 
   const res = await fetch(CLAUDE_API_URL, {
     method: 'POST',
     headers: {
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
       'content-type': 'application/json',
     },
-    body: JSON.stringify({
-      model,
-      max_tokens: maxTokens,
-      messages: [{ role: 'user', content: prompt }],
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
-    const err = await res.text();
+    const err = await res.text().catch(() => '');
     throw new Error(`Claude API error ${res.status}: ${err}`);
   }
 
-  const data = await res.json();
-  return data.content[0].text;
+  const raw = await res.json();
+  const content = Array.isArray(raw.content) ? raw.content : [];
+  const text = content
+    .filter((b) => b && b.type === 'text' && typeof b.text === 'string')
+    .map((b) => b.text)
+    .join('');
+  return { text, content, raw };
+}
+
+/** Convenience wrapper for a single user prompt; returns just the text. */
+export async function askClaude(prompt, opts = {}) {
+  const { text } = await callClaude({ ...opts, messages: [{ role: 'user', content: prompt }] });
+  return text;
 }

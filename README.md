@@ -1,95 +1,85 @@
-# Lawworld
+# LawWorld
 
-A top-down browser RPG for studying law. You walk around a 2D world and interact with zones, NPCs, and content powered by Claude AI and your Obsidian vault.
+A top-down browser RPG for consolidating law reading. The world is built from your Obsidian vault, and progress only happens when you show understanding by typing answers to a tutor. See `docs/VISION.md` for the design rules.
 
-Built with [Vite](https://vite.dev/) + vanilla JavaScript + [Phaser 3](https://phaser.io/).
-
----
-
-## What it does (foundation)
-
-- Top-down tile map with WASD / arrow-key movement
-- Player-character walks around a green tile world
-- Zone structure (`src/data/zones.js`) maps map regions to law topics
-- Claude API client (`src/api/claude.js`) for AI-driven NPC dialogue and quiz questions
-- Obsidian API client (`src/api/obsidian.js`) for reading/writing vault notes in-game
+Built with [Vite](https://vite.dev/), vanilla JavaScript and [Phaser 3](https://phaser.io/).
 
 ---
 
 ## Getting started
 
-### 1. Clone
-
-```bash
-git clone https://github.com/fynnamos/lawworld.git
-cd lawworld
-```
-
-### 2. Install dependencies
-
 ```bash
 npm install
+npm run dev      # open http://localhost:5173
+npm test         # node --test (pure logic in src/logic/)
+npm run build    # production build into dist/
 ```
 
-### 3. Set up environment variables
+Walk to the grey "Contract Law" rectangle and press **E** to play the offline demo encounter.
 
-```bash
-cp .env.example .env
+---
+
+## Settings
+
+The game is configured in the in-game **Settings** screen (arrives in task T07). Until then, values live in `localStorage` under the key `lawworld.settings.v1`, handled by `src/settings.js`.
+
+| Setting | Default | Notes |
+|---|---|---|
+| `claudeApiKey` | empty | Your Anthropic key. Stored only in this browser. |
+| `claudeModel` | `claude-sonnet-5-5` | Any Messages API model id. |
+| `obsidianUrl` | `https://127.0.0.1:27124` | Local REST API plugin (HTTPS port). |
+| `obsidianToken` | empty | Bearer token from the plugin's settings. |
+
+To set them by hand before the Settings screen exists, run this in the browser console on the game page:
+
+```js
+localStorage.setItem('lawworld.settings.v1', JSON.stringify({
+  claudeApiKey: 'sk-ant-...',
+  obsidianToken: '...',
+}));
 ```
 
-Open `.env` and fill in:
+**Order of precedence:** Settings (localStorage) first. A `.env` file is a **dev-only fallback**: it is read only while `npm run dev` is running, only when Settings has no value, and is ignored in production builds. No key is ever needed at build time and none is hard-coded.
 
-| Key | Where to get it |
-|---|---|
-| `VITE_CLAUDE_API_KEY` | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
-| `VITE_OBSIDIAN_TOKEN` | Obsidian → Settings → Local REST API plugin |
-| `VITE_OBSIDIAN_BASE_URL` | Default `http://127.0.0.1:27123` (change if custom port) |
+Optional `.env` (copy `.env.example`; `.env` is gitignored):
 
-### 4. Run the dev server
-
-```bash
-npm run dev
+```
+VITE_CLAUDE_API_KEY=
+VITE_OBSIDIAN_TOKEN=
+VITE_OBSIDIAN_BASE_URL=https://127.0.0.1:27124
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+Claude is called straight from the browser with the headers `x-api-key`, `anthropic-version: 2023-06-01` and `anthropic-dangerous-direct-browser-access: true`. That is fine for a personal local tool, but do not deploy it publicly with a key in it.
+
+---
+
+## Connecting Obsidian (self-signed certificate)
+
+1. In Obsidian, install and enable the **Local REST API** community plugin.
+2. Copy its API key (the bearer token) into LawWorld's Settings.
+3. The plugin serves HTTPS on `https://127.0.0.1:27124` with a **self-signed certificate**, which browsers block by default. **Open `https://127.0.0.1:27124` once in the same browser**, click through the warning ("Advanced", then "Proceed") and you should see a small JSON status page. After that, the game can talk to Obsidian.
+4. If Obsidian or Claude cannot be reached, the game falls back to **offline mode** with the built-in question bank, clearly labelled.
+
+### Write safety
+
+The game reads study notes live and never edits them. It may only create files whose names start with `TUTOR-SESSION-` (ending `.md`, vault root only). `LAW7054-Tort-Ch8-Breach-Standard-of-Care.md` is always refused. The rule is a pure function in `src/logic/noteGuard.js`, covered by `tests/noteGuard.test.js`, and `writeNote()` in `src/api/obsidian.js` checks it before any network call.
 
 ---
 
 ## Project structure
 
 ```
-lawworld/
-├── src/
-│   ├── game/          # Phaser scenes and game logic
-│   │   └── GameScene.js
-│   ├── api/           # External API clients
-│   │   ├── claude.js      # Claude AI (NPC dialogue, quizzes)
-│   │   └── obsidian.js    # Obsidian vault (read/write notes)
-│   ├── data/          # Static data and content structure
-│   │   └── zones.js       # Map zone definitions (regions → law topics)
-│   └── main.js        # Phaser game bootstrap
-├── .env               # Local secrets (gitignored)
-├── .env.example       # Template — copy to .env
-└── vite.config.js
+src/
+├── logic/   pure JS (no Phaser, no DOM, no import.meta.env): rules, encounter engine, note guard. Unit-tested.
+├── api/     browser clients: claude.js, obsidian.js, offlineTutor.js
+├── game/    Phaser scenes (graphics drawn programmatically)
+├── ui/      DOM overlays (encounter, later settings and journal)
+├── data/    curriculum, tutors, offline question bank
+├── settings.js   localStorage-backed settings
+└── main.js
+tests/       node:test files, run by `npm test`
 ```
-
----
 
 ## Controls
 
-| Key | Action |
-|---|---|
-| `W` / `↑` | Move up |
-| `S` / `↓` | Move down |
-| `A` / `←` | Move left |
-| `D` / `→` | Move right |
-
----
-
-## Build for production
-
-```bash
-npm run build
-```
-
-Output goes to `dist/`. Deploy anywhere that serves static files (Cloudflare Pages, Vercel, Netlify, etc.).
+`W` `A` `S` `D` / arrow keys move, `E` interacts. While an overlay is open, Phaser keyboard input is switched off so you can type freely.
