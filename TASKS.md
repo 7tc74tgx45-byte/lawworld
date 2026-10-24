@@ -66,7 +66,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - The engine depends on an injected `tutor` interface: `generate(stage, context) → prompt`, `evaluate(stage, prompt, answer, context) → { verdict: 'solid'|'partial'|'missing', feedback, conceptsHit, conceptsMissed, iracScore?, followUp? }`, `hint(...)`, `answerQuestion(...)`.
   - Tests with a mock tutor: cannot reach a verdict without answering; short answer rejected; hints never reveal the model answer field; consolidation and explored outcomes; gaps produced.
 
-- [x] **T06 — Claude tutor provider and offline fallback**
+- [ ] **T06 — Claude tutor provider and offline fallback**
   - `src/data/tutors.js`: the three personas (VISION §3) as system-prompt fragments with voice examples.
   - `src/api/tutor.js`: implements the tutor interface with Claude. Context = the note section for the subsection (fetched live via Obsidian, section extracted by a pure function `extractSection(markdown, heading)` in `src/logic/notes.js`), prior TUTOR-SESSION notes for that subsection, and open gaps. Ask for strict JSON; parse defensively (strip code fences, retry once with a repair prompt). `answerQuestion` uses the web_search server tool only when the note lacks the answer and marks it external.
   - `src/api/offlineTutor.js`: same interface, built-in bank (`src/data/offlineBank.js`) plus keyword-overlap evaluation against `keyConcepts`. Write a full 7-stage bank for at least the first 3 Contract subsections and the first Tort subsection, grounded in the vault notes (use `vault_read`).
@@ -111,10 +111,45 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
 - [ ] **T14 — QA pass against the vision**
   - Read the whole codebase against VISION.md. Write `QA_REPORT.md`: what works, what violates the learning rules, bugs, missing pieces, ranked. Fix the top issues that fit this session; add the rest as new tasks below.
 
-- [ ] **T15 — Atmospheric music**
-  - Source CC0 medieval/ambient tracks from OpenGameArt.org
-  - Wire into Phaser sound system with looping per district
-  - Crossfade when player crosses district borders
-  - Separate tenser track for the encounter screen
+- [ ] **T15 — Atmospheric music (procedural)**
+  - Create `src/audio/music.js`: Web Audio API ambient engine, no downloads needed.
+  - Four region themes generated in code: Contract (summer) = bright plucked strings (triangle + sawtooth oscillators, 120 BPM arpeggio in C major); Tort (autumn) = minor-key drone (detuned sawtooth pair, slow LFO on gain, Am); Public Law (winter) = sparse open fifths (sine waves, long attack, slow decay); Hub (spring) = warm pad (sine + triangle mix, gentle vibrato).
+  - Encounter track: low drone with rising tension (sawtooth, filter cutoff sweeping up slowly, diminished chord).
+  - Each theme loops seamlessly (schedule next buffer before current ends).
+  - Crossfade on region/encounter transition: 2-second linear gain ramp out → in.
+  - `MusicManager`: `playRegion(regionId)`, `playEncounter()`, `stop()`, `setVolume(0–1)`, `mute(bool)`.
+  - Wire into `GameScene.js` region overlap events and the encounter open/close hooks.
+  - Settings overlay: volume slider and mute toggle (persist to settings.js).
+  - No external files, no network requests.
+  - Done when music plays in browser and changes on region cross and encounter open.
+
+- [ ] **T16 — Dialogue portraits (canvas-generated)**
+  - Create `src/ui/portraits.js`: draw pixel-art tutor portraits on an `OffscreenCanvas` (64×64px), return as `ImageBitmap`.
+  - Professor Hale: silver hair, round glasses, dark green robes, warm skin tone — Contract Law.
+  - Dr Okafor: close-cropped hair, sharp jaw, deep purple robes — Tort Law.
+  - Ms Patel: long dark braid, red and gold robes, reading glasses — Public Law.
+  - Each portrait: 8px grid, ~20 distinct colours, drawn with `ctx.fillRect` calls only (no images loaded).
+  - Display in encounter UI (`src/ui/encounter.js`): 64×64 `<canvas>` beside tutor name; swap on tutor change.
+  - Export `getPortrait(tutorId)` → `HTMLCanvasElement`.
+  - Done when each tutor's portrait appears in the encounter panel.
+
+- [ ] **T17 — Region transitions**
+  - Create `src/ui/transitions.js`: DOM overlay div (full-screen, `position:fixed`, `z-index:1000`, `pointer-events:none`).
+  - Fade transition: opacity 0→1→0 over 600ms total, colour matches region season (green/amber/grey/white).
+  - Region name banner: centred text with season colour, appears during the fade-in peak (300ms), font size 2rem, fades with the overlay.
+  - `TransitionManager`: `crossRegion(fromRegion, toRegion, onMidpoint)` — calls `onMidpoint` at opacity peak so GameScene can swap tiles/weather while screen is black.
+  - Wire into `GameScene.js` region border colliders.
+  - Done when crossing a region border shows a colour flash and the region name.
+
+- [ ] **T18 — Sound effects (Web Audio)**
+  - Create `src/audio/sfx.js`: all sounds synthesised with Web Audio API, no files loaded.
+  - Footsteps: short noise burst (white noise, 80ms, exponential decay) — pitch varies by terrain: grass (low, 200Hz filter), stone (mid, 800Hz), sand (soft, 100Hz), snow (crisp, 1.2kHz).
+  - Door open: ascending chirp (sine sweep 300→900Hz, 200ms).
+  - Correct answer chime: major third interval (sine, C5+E5, 400ms, slow decay).
+  - Wrong answer thud: low thump (sine, 80Hz, 150ms, sharp decay) + short noise burst.
+  - Consolidation fanfare: four-note ascending phrase (C4–E4–G4–C5, triangle wave, 100ms per note, reverb via convolver with impulse response built in code).
+  - `SFXManager`: `play(name)` where name ∈ `footstep-grass | footstep-stone | footstep-sand | footstep-snow | door-open | correct | wrong | fanfare`.
+  - Wire footsteps into player movement update (one per ~400ms walk cycle), door into building entry, correct/wrong into encounter evaluation callback, fanfare into consolidation event.
+  - Done when sounds play for each action in browser.
 
 ## Agent-proposed

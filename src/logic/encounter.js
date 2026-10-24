@@ -12,65 +12,16 @@
 //
 // Every engine method resolves to { ok, messages[], prompt, done, stage, rejected? }.
 
-export const STAGES = [
-  { n: 1, key: 'intro', label: 'Intro' },
-  { n: 2, key: 'plain', label: 'Plain English' },
-  { n: 3, key: 'precision', label: 'Precision' },
-  { n: 4, key: 'authority', label: 'Authority' },
-  { n: 5, key: 'application', label: 'Application' },
-  { n: 6, key: 'checkpoint', label: 'Checkpoint' },
-  { n: 7, key: 'verdict', label: 'Verdict' },
-];
+// Constants and pure rules (STAGES, computeOutcome, normaliseEvaluation, leaksAnswer) live in encounterRules.js.
+import {
+  STAGES, MIN_EXCHANGES, MIN_ANSWER_CHARS, MAX_FOLLOWUPS, MAX_HINTS, CHECKPOINT_QUESTIONS, REFLECTIONS,
+  computeOutcome, normaliseEvaluation, leaksAnswer,
+} from './encounterRules.js';
 
-export const MIN_EXCHANGES = 8;
-export const MIN_ANSWER_CHARS = 15;
-export const MAX_FOLLOWUPS = 2;
-export const MAX_HINTS = 2;
-export const CHECKPOINT_QUESTIONS = 3;
-
-const REFLECTIONS = [
-  'Before I give the verdict: in a sentence or two, which part of this topic do you feel least sure about, and why?',
-  'One more thing for the record: pick one case from this session and tell me, in your own words, what it decided.',
-  'Last check: what is the single idea from this session you would most want to remember in an exam or with a client?',
-];
-
-const RANK = { missing: 0, partial: 1, solid: 2 };
-
-/** Consolidation rule, exactly VISION §1. */
-export function computeOutcome({ stages, checkpoint }) {
-  for (const n of [2, 3, 4, 5]) {
-    const s = stages[n];
-    if (!s || !s.answered || !s.verdict) return 'explored';
-    if (RANK[s.verdict] < RANK.partial) return 'explored';
-  }
-  if (stages[3].verdict !== 'solid' || stages[5].verdict !== 'solid') return 'explored';
-  if (checkpoint.correct < 2) return 'explored';
-  return 'consolidated';
-}
-
-/** Make a tutor's evaluation safe for the engine: unknown verdicts count as partial, lists are arrays. */
-export function normaliseEvaluation(ev) {
-  const e = ev && typeof ev === 'object' ? { ...ev } : {};
-  if (!(e.verdict in RANK)) e.verdict = 'partial';
-  e.feedback = typeof e.feedback === 'string' ? e.feedback : '';
-  e.conceptsHit = Array.isArray(e.conceptsHit) ? e.conceptsHit.filter(Boolean) : [];
-  e.conceptsMissed = Array.isArray(e.conceptsMissed) ? e.conceptsMissed.filter(Boolean) : [];
-  if (e.iracScore != null) e.iracScore = Number.isFinite(+e.iracScore) ? +e.iracScore : undefined;
-  return e;
-}
-
-const words = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9£ ]+/g, ' ').split(/\s+/).filter(Boolean);
-
-/** True if `text` repeats a run of `run` consecutive words from the secret answer. */
-export function leaksAnswer(text, secret, run = 8) {
-  const w = words(secret);
-  if (w.length < run) return false;
-  const hay = ' ' + words(text).join(' ') + ' ';
-  for (let i = 0; i + run <= w.length; i++) {
-    if (hay.includes(' ' + w.slice(i, i + run).join(' ') + ' ')) return true;
-  }
-  return false;
-}
+export {
+  STAGES, MIN_EXCHANGES, MIN_ANSWER_CHARS, MAX_FOLLOWUPS, MAX_HINTS, CHECKPOINT_QUESTIONS,
+  computeOutcome, normaliseEvaluation, leaksAnswer,
+};
 
 /**
  * createEncounter({ subsection, tutor, priorGaps }) -> engine.
@@ -79,7 +30,8 @@ export function leaksAnswer(text, secret, run = 8) {
  */
 export function createEncounter(arg, legacyTutor) {
   const opts = legacyTutor ? { subsection: arg, tutor: legacyTutor } : arg ?? {};
-  const { subsection, tutor } = opts;
+  const { subsection } = opts;
+  let tutor = opts.tutor; // can be swapped by switchTutor() (e.g. "continue offline" after a failed Claude call)
   const priorGaps = Array.isArray(opts.priorGaps) ? opts.priorGaps.map((g) => ({ ...g })) : [];
   if (!subsection || !tutor) throw new Error('createEncounter needs { subsection, tutor }.');
   // Answer keys from the tutor's generate() stay here, so hints can be checked against them.
@@ -103,7 +55,11 @@ export function createEncounter(arg, legacyTutor) {
     state.stages[n] = { answers: [], evaluations: [], followUps: 0, hints: 0, notSure: false, answered: false, verdict: null, iracScore: null };
   }
 
-  const tutorName = tutor.name ?? 'Tutor';
+  let tutorName = tutor.name ?? 'Tutor';
+  const tutorsUsed = [tutorName];
+  // Set while a stage prompt is being fetched. If the fetch fails, next() picks it up again
+  // so the player's answer (already evaluated and counted) is never submitted twice.
+  let pendingOpen = null;
 
   function say(role, text, meta = {}) {
     const m = { role, text, stage: state.stage, ...meta };
@@ -148,7 +104,9 @@ export function createEncounter(arg, legacyTutor) {
 
   async function openPrompt(stage) {
     state.stage = stage;
+    pendingOpen = stage;
     const p = await tutor.generate(stage, ctx());
+    pendingOpen = null;
     secret = typeof p.modelAnswer === 'string' ? p.modelAnswer : '';
     state.current = publicPrompt(p, stage, stage === 6 ? { mcqIndex: state.mcq.index, mcqTotal: CHECKPOINT_QUESTIONS } : {});
     return [say('tutor', p.text, { kind: state.current.kind })];
@@ -280,8 +238,41 @@ export function createEncounter(arg, legacyTutor) {
     return submitOpen(text);
   }
 
+  /** Re-fetch the prompt of the current stage with the current tutor (used after switching tutor). */
+  async function refreshPrompt() {
+    if (state.done) return out([]);
+    if (pendingOpen !== null) return out(await openPrompt(pendingOpen));
+    const cur = state.current;
+    if (!cur) return next();
+    if (cur.kind === 'info') {
+      const p = await tutor.generate(1, ctx());
+      state.current = { stage: 1, kind: 'info', text: p.text };
+      return out([say('tutor', p.text, { kind: 'info' })]);
+    }
+    if (cur.isFollowUp) return out([]); // a follow-up is about the player's own answer: keep it
+    if (state.stage >= 2 && state.stage <= 6 && !cur.reflection) return out(await openPrompt(state.stage));
+    return out([]);
+  }
+
+  async function switchTutor(newTutor) {
+    if (state.done) return out([]);
+    const old = { tutor, tutorName };
+    tutor = newTutor;
+    tutorName = tutor.name ?? 'Tutor';
+    try {
+      const res = await refreshPrompt();
+      if (!tutorsUsed.includes(tutorName)) tutorsUsed.push(tutorName);
+      return res;
+    } catch (e) {
+      tutor = old.tutor;
+      tutorName = old.tutorName;
+      throw e;
+    }
+  }
+
   async function next() {
     if (state.done) return out([]);
+    if (pendingOpen !== null) return out(await openPrompt(pendingOpen));
     if (!state.current) {
       state.stage = 1;
       const p = await tutor.generate(1, ctx());
@@ -393,7 +384,7 @@ export function createEncounter(arg, legacyTutor) {
     }
     return {
       subsectionId: subsection.id,
-      tutor: tutorName,
+      tutor: tutorsUsed.length > 1 ? tutorsUsed.join(' then ') : tutorName,
       outcome,
       finished,
       stages,
@@ -420,8 +411,14 @@ export function createEncounter(arg, legacyTutor) {
     if (state.left) return reject('You have left this encounter.');
     if (busy) return reject('One moment: the tutor is still thinking.');
     busy = true;
+    const mark = state.transcript.length;
     try {
       return await fn(...args);
+    } catch (e) {
+      // Whatever was said before the failure (the player's answer, the feedback) still belongs on
+      // screen; the UI reads it from e.messages and offers retry.
+      if (e && typeof e === 'object') e.messages = state.transcript.slice(mark).map((m) => ({ ...m }));
+      throw e;
     } finally {
       busy = false;
     }
@@ -433,8 +430,11 @@ export function createEncounter(arg, legacyTutor) {
     hint: guarded(hint),
     notSure: guarded(notSure),
     ask: guarded(ask),
+    switchTutor: guarded(switchTutor),
+    /** True when a failed call left a stage prompt unfetched: retry with next(), never submit() again. */
+    hasPending: () => pendingOpen !== null,
     leave,
     result,
-    status: () => ({ stage: state.stage, exchanges: state.exchanges, done: state.done, left: state.left, tutorName }),
+    status: () => ({ stage: state.stage, exchanges: state.exchanges, done: state.done, left: state.left, tutorName, prompt: state.current }),
   };
 }

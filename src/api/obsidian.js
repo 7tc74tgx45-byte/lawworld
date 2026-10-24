@@ -79,17 +79,17 @@ export async function searchNotes(query) {
 
 /** Quick connectivity check for the Settings screen. Returns { ok, message }. */
 export async function testConnection() {
+  const { baseUrl, token } = getObsidianConfig();
   try {
-    const { baseUrl, token } = getObsidianConfig();
-    if (!token) return { ok: false, message: 'No Obsidian token set.' };
+    if (!token) return { ok: false, message: 'No Obsidian token set. Copy it from the Local REST API plugin settings in Obsidian.' };
     const res = await fetch(`${baseUrl}/`, { headers: { Authorization: `Bearer ${token}` } });
     if (res.status === 401 || res.status === 403) return { ok: false, message: 'Obsidian rejected the token.' };
     if (!res.ok) return { ok: false, message: `Obsidian replied ${res.status}.` };
-    return { ok: true, message: 'Connected to Obsidian.' };
+    return { ok: true, message: `Connected to Obsidian at ${baseUrl}.` };
   } catch {
     return {
       ok: false,
-      message: `Could not reach Obsidian. Is it open with the Local REST API plugin on? Open ${DEFAULT_OBSIDIAN_URL} once in this browser and accept the certificate.`,
+      message: `Could not reach Obsidian at ${baseUrl}. Is Obsidian open with the Local REST API plugin switched on? Open ${baseUrl} in a new browser tab once and accept the certificate warning, then test again.`,
     };
   }
 }

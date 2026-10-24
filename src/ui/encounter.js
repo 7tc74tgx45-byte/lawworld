@@ -2,15 +2,9 @@
 // openEncounter({ subsection, tutor, onOpen, onClose }) -> { close }
 // onOpen/onClose let the scene disable and restore Phaser keyboard input.
 
-import './encounter.css';
 import { createEncounter, STAGES } from '../logic/encounter.js';
-
-const el = (tag, cls, text) => {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text != null) e.textContent = text;
-  return e;
-};
+import { describeError } from '../logic/apiErrors.js';
+import { openOverlay, el } from './dom.js';
 
 let active = null;
 
@@ -18,7 +12,8 @@ export function isEncounterOpen() {
   return !!active;
 }
 
-export function openEncounter({ subsection, tutor, priorGaps, onOpen, onClose, onFinish }) {
+// makeOfflineTutor() (optional) builds the offline tutor for "continue offline" after a failed Claude call.
+export function openEncounter({ subsection, tutor, priorGaps, onOpen, onClose, onFinish, makeOfflineTutor }) {
   if (active) return active;
   const engine = createEncounter({ subsection, tutor, priorGaps });
   let busy = false;
@@ -38,7 +33,13 @@ export function openEncounter({ subsection, tutor, priorGaps, onOpen, onClose, o
   const sw = el('div', 'lw-swatch');
   sw.style.background = tutor.colour ?? '#c9a227';
   head.append(sw, el('div', 'lw-tutor', tutor.name), el('div', 'lw-title', `${subsection.module}: ${subsection.title}`));
-  if (tutor.offline) head.append(el('div', 'lw-badge', 'OFFLINE MODE: built-in question bank'));
+  const badge = el('div', 'lw-badge');
+  const setBadge = () => {
+    badge.textContent = tutor.offline ? 'OFFLINE MODE: built-in question bank' : 'ONLINE: Claude reading your note';
+    badge.className = 'lw-badge' + (tutor.offline ? '' : ' online');
+  };
+  setBadge();
+  head.append(badge);
 
   const pips = el('div', 'lw-pips');
   const stageName = el('div', 'lw-stage-name');
@@ -59,9 +60,9 @@ export function openEncounter({ subsection, tutor, priorGaps, onOpen, onClose, o
   bSubmit.type = bHint.type = bNot.type = bAsk.type = bLeave.type = 'button';
   const note = el('div', 'lw-hint-note', 'Every step needs a typed answer (or a choice). Hints nudge, they never give the answer. Leaving keeps your progress.');
 
-  panel.append(head, pips, transcript, options, inputWrap, note, buttons);
-  overlay.append(panel);
-  document.body.append(overlay);
+  const errBox = el('div');
+  let lastAction = null;
+  panel.append(head, pips, transcript, errBox, options, inputWrap, note, buttons);
 
   function renderPips() {
     pips.textContent = '';
@@ -127,18 +128,67 @@ export function openEncounter({ subsection, tutor, priorGaps, onOpen, onClose, o
   async function run(fn) {
     if (busy || closed) return;
     busy = true;
+    lastAction = fn;
+    errBox.textContent = '';
     for (const b of buttons.querySelectorAll('button')) if (b !== bLeave) b.disabled = true;
+    for (const b of options.querySelectorAll('button')) b.disabled = true;
+    const thinking = el('div', 'lw-msg thinking');
+    thinking.append(`${tutor.name} is thinking`, Object.assign(el('span', 'lw-dots'), { innerHTML: '<span>.</span><span>.</span><span>.</span>' }));
+    transcript.append(thinking);
+    transcript.scrollTop = transcript.scrollHeight;
     try {
       const res = await fn();
+      thinking.remove();
       if (res && res.ok !== false && mode === 'ask') mode = 'answer';
       sync(res);
     } catch (e) {
-      addMsg({ role: 'system', text: `Something went wrong: ${e.message}` });
+      thinking.remove();
+      e?.messages?.forEach(addMsg); // what was already said (the answer, feedback) stays visible
+      showError(e);
     } finally {
       busy = false;
       for (const b of buttons.querySelectorAll('button')) b.disabled = false;
+      for (const b of options.querySelectorAll('button')) b.disabled = false;
       if (!inputWrap.style.display) ta.focus();
     }
+  }
+
+  // After a failure: Retry re-runs the same action. If the engine already counted the answer and only
+  // the next prompt failed, retry fetches that prompt (next) instead of submitting the answer twice.
+  function showError(e) {
+    const info = describeError(e);
+    errBox.textContent = '';
+    const box = el('div', 'lw-error');
+    box.append(el('div', null, info.message));
+    const row = el('div', 'row');
+    const retry = el('button', 'lw-btn primary', 'Retry');
+    retry.type = 'button';
+    retry.onclick = () => run(engine.hasPending() ? () => engine.next() : lastAction);
+    row.append(retry);
+    if (!tutor.offline && makeOfflineTutor) {
+      const off = el('button', 'lw-btn', 'Continue offline');
+      off.type = 'button';
+      off.onclick = () => {
+        let t;
+        try {
+          t = makeOfflineTutor();
+        } catch (err) {
+          errBox.textContent = '';
+          errBox.append(Object.assign(el('div', 'lw-error'), { textContent: describeError(err).message }));
+          return;
+        }
+        tutor = t;
+        tutorLabel.textContent = t.name;
+        setBadge();
+        panel.style.setProperty('--tc', tutor.colour ?? '#c9a227');
+        sw.style.background = tutor.colour ?? '#c9a227';
+        errBox.textContent = '';
+        run(() => engine.switchTutor(t));
+      };
+      row.append(off);
+    }
+    box.append(row);
+    errBox.append(box);
   }
 
   function doSubmit() {
@@ -193,7 +243,7 @@ export function openEncounter({ subsection, tutor, priorGaps, onOpen, onClose, o
     if (closed) return;
     closed = true;
     const res = engine.leave();
-    overlay.remove();
+    closeOverlay();
     active = null;
     onClose?.(res);
   }

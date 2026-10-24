@@ -4,6 +4,7 @@
 // (VITE_CLAUDE_API_KEY) is a dev-only fallback and is ignored in production builds.
 
 import { getSetting, getStoredSetting } from '../settings.js';
+import { describeError } from '../logic/apiErrors.js';
 
 export const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 export const DEFAULT_MODEL = 'claude-sonnet-5-5';
@@ -68,6 +69,17 @@ export async function callClaude({ system, messages, tools, maxTokens = 1024, mo
     .map((b) => b.text)
     .join('');
   return { text, content, raw };
+}
+
+/** Tiny live check for the Settings screen (1 token). Returns { ok, message }; never throws. */
+export async function testClaudeConnection() {
+  if (!getClaudeKey()) return { ok: false, message: 'No Claude API key set. Paste one above first.' };
+  try {
+    await callClaude({ messages: [{ role: 'user', content: 'Reply with the single word: ok' }], maxTokens: 8 });
+    return { ok: true, message: `Connected. Claude answered using model ${getClaudeModel()}.` };
+  } catch (e) {
+    return { ok: false, message: describeError(e).message };
+  }
 }
 
 /** Convenience wrapper for a single user prompt; returns just the text. */

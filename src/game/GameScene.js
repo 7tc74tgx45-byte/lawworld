@@ -1,6 +1,14 @@
 import Phaser from 'phaser';
 import { openEncounter } from '../ui/encounter.js';
+import { openOverlay, setOverlayHandlers, isAnyOverlayOpen } from '../ui/dom.js';
+import { openSettings } from '../ui/settings.js';
+import { downloadSave, pickAndImportSave } from '../ui/saveAdapter.js';
 import { createOfflineTutor } from '../api/offlineTutor.js';
+import { hasOfflineBank } from '../data/offlineBank.js';
+import { getClaudeKey } from '../api/claude.js';
+import { getObsidianConfig } from '../api/obsidian.js';
+import { chooseMode } from '../logic/tutorMode.js';
+import { openGaps } from '../logic/progress.js';
 import { demoSubsection } from '../data/demoSubsection.js';
 import { getSaveStore } from '../ui/saveAdapter.js';
 
@@ -103,6 +111,12 @@ export default class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setVisible(false);
     this.encounterOpen = false;
+    // Any DOM overlay (encounter, menu, settings) disables Phaser keyboard + captures; the last one closing restores them.
+    setOverlayHandlers({
+      lock: () => this.setKeyboardForOverlay(true),
+      unlock: () => this.setKeyboardForOverlay(false),
+    });
+    this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.banner = this.add
       .text(400, 570, '', { fontSize: '13px', fill: '#ffffff', backgroundColor: '#000000aa', padding: { x: 6, y: 3 } })
       .setOrigin(0.5)
@@ -131,19 +145,60 @@ export default class GameScene extends Phaser.Scene {
   openDemoEncounter() {
     if (this.encounterOpen) return;
     this.encounterOpen = true;
+    const sub = demoSubsection;
+    const personaId = this.saveStore.state.tutorPreference?.[sub.id] ?? 'hale';
+    const makeOfflineTutor = () => createOfflineTutor({ personaId });
+    const { mode } = chooseMode({
+      hasClaudeKey: !!getClaudeKey(),
+      hasObsidianToken: !!getObsidianConfig().token,
+      hasOfflineBank: hasOfflineBank(sub.id),
+    });
+    // The demo subsection has no vault heading, so Claude can only be used for real curriculum subsections.
+    // Until the world is generated from the curriculum (T09) the demo always runs offline.
+    void mode;
     openEncounter({
-      subsection: demoSubsection,
-      tutor: createOfflineTutor(),
-      onOpen: () => this.setKeyboardForOverlay(true),
+      subsection: sub,
+      tutor: makeOfflineTutor(),
+      makeOfflineTutor,
+      priorGaps: openGaps(this.saveStore.state.progress, { subsectionId: sub.id }),
+      onOpen: () => {},
       onClose: (res) => {
-        this.setKeyboardForOverlay(false);
         this.encounterOpen = false;
+        // Encounter end writes the result into progress + save (immediate save).
+        this.saveStore.applyEncounter(res, { subsection: sub });
         const gaps = res.gaps.length;
-          this.saveStore.applyEncounter(res, { subsection: demoSubsection });
-        this.banner.setText(`${demoSubsection.title}: ${res.outcome.toUpperCase()}${gaps ? ` (${gaps} gap${gaps > 1 ? 's' : ''} logged)` : ''}`);
+        this.banner.setText(`${sub.title}: ${res.outcome.toUpperCase()}${gaps ? ` (${gaps} gap${gaps > 1 ? 's' : ''} logged)` : ''}`);
         this.time.delayedCall(6000, () => this.banner.setText(''));
       },
     });
+  }
+
+  openMenu() {
+    if (isAnyOverlayOpen()) return;
+    const { panel, close } = openOverlay({ panelClass: 'small', onEscape: () => close() });
+    const items = [
+      ['Resume', () => close()],
+      ['Settings (Claude key, Obsidian)', () => { close(); openSettings(); }],
+      ['Save now', () => { this.saveStore.save(); this.banner.setText('Saved.'); this.time.delayedCall(2500, () => this.banner.setText('')); close(); }],
+      ['Export save (download JSON)', () => downloadSave(this.saveStore)],
+      ['Import save (JSON file)', async () => {
+        const r = await pickAndImportSave(this.saveStore);
+        if (r.ok) window.location.reload();
+        else if (!r.cancelled) this.banner.setText(r.message);
+      }],
+    ];
+    panel.append(Object.assign(document.createElement('h2'), { className: 'lw-h', textContent: 'Menu' }));
+    const list = document.createElement('div');
+    list.className = 'lw-menu-list';
+    items.forEach(([label, fn]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'lw-btn';
+      b.textContent = label;
+      b.onclick = fn;
+      list.append(b);
+    });
+    panel.append(list);
   }
 
   /** While a DOM overlay is open, Phaser must not swallow or capture keys. */
@@ -162,7 +217,11 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update() {
-    if (this.encounterOpen) return;
+    if (this.encounterOpen || isAnyOverlayOpen()) return;
+    if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
+      this.openMenu();
+      return;
+    }
     const near = Phaser.Geom.Rectangle.Overlaps(this.demoZone, this.player.getBounds());
     this.zonePrompt.setVisible(near);
     if (near && Phaser.Input.Keyboard.JustDown(this.eKey)) {

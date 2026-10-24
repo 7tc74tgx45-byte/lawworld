@@ -393,3 +393,46 @@ Added this session:
 - **Prompts are untested live.** Expect to tune the Claude prompt wording after a first real session.
 
 **Next:** T07: choose Claude or offline when an encounter opens, pass real curriculum subsections and the persona, add retry and "continue offline" on tutor errors, and show a clear message when a subsection has no offline bank (`NoOfflineBankError`). T08: write session notes with `## Gaps` and `## Next time`.
+
+## T07 — partial — 2026-10-24 02:11:12
+Cost $2.49 · 18 min · attempt 1
+
+**What changed:** The encounter overlay, Esc menu and Settings screen are built, and the demo encounter can be played start to finish offline. Build and all 135 tests pass. I haven't tried it in a browser, so none of the DOM overlay code has run. I haven't ticked T07 in TASKS.md.
+
+**Not done:**
+- **Claude path:** encounters can't use Claude yet. The only playable building is still the grey "Contract Law" rectangle, which runs the demo subsection offline. The Claude path needs real curriculum subsections, which arrive with T09's world.
+- **Tutor choice:** there is no tutor picker. The tutor preference is read from the save, defaulting to Hale.
+- **Offline fallback:** `chooseMode` is only called and its result ignored. The "continue offline" button is wired but can't appear until a Claude tutor is passed in.
+
+**Changes:**
+- **Encounter overlay (`src/ui/encounter.js`):** it now shows the tutor name and swatch, the transcript, the answer box, MCQ buttons, stage pips and the Submit, Hint, I'm not sure, Ask and Leave buttons.
+  - **Status and loading:** an OFFLINE or ONLINE badge sits in the header, and a "thinking…" line shows while the tutor works.
+  - **Errors:** a failed call shows a readable message with **Retry** and, when a Claude tutor is in use, **Continue offline**.
+  - **No double-counting:** retry cannot submit one answer twice. The engine marks a failed next-prompt fetch as pending and retry re-fetches that prompt only. The engine can also swap tutor mid-encounter.
+  - **Result:** the finished encounter writes into progress and saves immediately.
+- **Keyboard (`src/ui/dom.js`, `src/logic/overlayLock.js`):** every overlay goes through one counted lock. Opening the first overlay disables Phaser keyboard input and releases key captures. Closing the last one restores them. Menu to Settings can't re-enable the keys early.
+- **Esc menu (`src/game/GameScene.js`):** Esc opens a menu with Resume, Settings, Save now, Export save and Import save. Esc inside an encounter does nothing, so a stray press can't lose your place. Use Leave.
+- **Settings (`src/ui/settings.js`):** fields for Claude key, model, Obsidian URL and token, with Test Claude and Test Obsidian buttons. Results show as green or red text, and the certificate instruction (open `https://127.0.0.1:27124` once and accept it) is on screen. `testClaudeConnection` is new in `claude.js`, and the Obsidian test messages are clearer.
+- **Error text (`src/logic/apiErrors.js`):** Claude and Obsidian failures become plain messages, such as bad key, bad model, rate limit, and "open the certificate URL" for network errors.
+- **Refactors:** the CSS moved to `src/style.css` and is imported in `main.js`. The engine's constants and pure rules moved to `src/logic/encounterRules.js`, which the engine re-exports so imports are unchanged.
+- **Tests:** new `tests/uiLogic.test.js` covers error messages, `chooseMode`, the overlay lock, and retry-without-double-counting with a tutor switch.
+
+**Check before trusting:**
+- **Settings tests:** the Claude test sends a 1-token call with your key.
+- **Overlay code:** the keyboard lock logic is unit-tested, but the DOM code around it is not.
+- **Dead CSS:** the `.lw-door*` and `.lw-tutor-pick` styles in `style.css` are unused until the study-door UI exists.
+
+**Try it:** Run `npm run dev`.
+1. Walk to the grey "Contract Law" rectangle and press E. The encounter opens with an OFFLINE MODE badge.
+2. Type with W, A, S, D and Space. They should type normally, and the character should not move.
+3. Play through: type answers (Enter submits, Shift+Enter adds a line), try Hint and I'm not sure, ask a question, answer the three MCQs, and read the verdict. Then close it and check the banner and save.
+4. Press Esc in the world to open the menu and then Settings. Click Test Obsidian with no token to see the message. With Obsidian running, accept the certificate first, then test again.
+5. Confirm the character moves again after every overlay closes.
+
+**Design notes:** —
+
+**Next:** 1. Wire the study door once T09 provides real buildings. Show the locked padlock tooltip, a tutor picker (hale, okafor, chen) that saves to `tutorPreference`, and `chooseMode` with an offline-bank check. Build `createClaudeTutor` when the mode is claude, and pass `makeOfflineTutor`.
+2. Show the `NoOfflineBankError` message in the encounter when a building has no offline bank.
+3. Add a "Play offline" toggle that sets `forceOffline`.
+4. Do a browser pass on the overlay layout.
+5. T08 will read the session-note fields from `result.tutor` and `result.transcript`.
