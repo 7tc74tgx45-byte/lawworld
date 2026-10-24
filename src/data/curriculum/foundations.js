@@ -100,4 +100,11 @@ export const foundationsDistricts = [
       ['lecture-hall', 'Lecture Hall', 'Lecture Hall', [], [], [], { pre: [], type: 'lecture' }],
     ],
   }),
+  // Case Library — browse every case in the curriculum, search by name, MCQ quiz.
+  D({
+    id: 'found-case-library', title: 'Case Library', chapter: 'Hub', after: [],
+    subs: [
+      ['case-library', 'Case Library', 'Case Library', [], [], [], { pre: [], type: 'library' }],
+    ],
+  }),
 ];

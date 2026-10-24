@@ -6,6 +6,7 @@ import { openDoorPanel } from '../ui/doorPanel.js';
 import { openWorkshopPanel } from '../ui/workshopPanel.js';
 import { openWorkshopEncounter } from '../ui/workshopEncounter.js';
 import { openLecturePanel } from '../ui/lecturePanel.js';
+import { openCaseLibraryPanel } from '../ui/caseLibraryPanel.js';
 import { parseWorkshopNote } from '../logic/workshopParser.js';
 import { openJournal } from '../ui/journal.js';
 import { downloadSave, pickAndImportSave, getSaveStore } from '../ui/saveAdapter.js';
@@ -365,6 +366,11 @@ export default class GameScene extends Phaser.Scene {
     void b;
   }
 
+  /** E at the Case Library: browse and quiz on every case in the curriculum. */
+  interactWithLibrary(b) {
+    openCaseLibraryPanel({ curriculum: this.curriculum });
+    void b;
+  }
 
   lightBrazier(districtId) {
     const r = lightBrazierEarly(this.curriculum, this.saveStore.state, districtId);
@@ -595,11 +601,15 @@ export default class GameScene extends Phaser.Scene {
     }
     if (door) {
       const state = this.states[door.id] ?? 'locked';
-      const label = state === 'locked' ? '🔒 Locked: press E to see what unlocks it' : `Press E to study (${STATE_LABEL[state]})`;
+      const isLibrary = door.type === 'library';
+      const label = isLibrary ? 'Press E to enter the Case Library'
+        : state === 'locked' ? '🔒 Locked: press E to see what unlocks it'
+        : `Press E to study (${STATE_LABEL[state]})`;
       this.prompt.setText(`${door.title}\n${label}`).setVisible(true);
       if (Phaser.Input.Keyboard.JustDown(this.eKey) || Phaser.Input.Keyboard.JustDown(this.enterKey)) {
         if (door.type === 'workshop') this.interactWithWorkshop(door);
         else if (door.type === 'lecture') this.interactWithLecture(door);
+        else if (door.type === 'library') this.interactWithLibrary(door);
         else this.interactWithDoor(door);
       }
     } else {
