@@ -4,6 +4,7 @@
 import { OFFLINE_BANK, hasOfflineBank } from '../data/offlineBank.js';
 import { CASES, SHORT } from '../data/offlineCases.js';
 import { normalise } from '../logic/keywordEval.js';
+import { getPersona } from '../data/tutors.js';
 
 export const TUTORS = {
   hale: { id: 'hale', name: 'Professor Hale', colour: '#c9a227', style: 'Socratic' },
@@ -40,8 +41,9 @@ const NOTE_QA = [
   { rx: ['telex', 'telephone', 'instant', 'email'], text: 'For instantaneous communications the general rule applies: acceptance is effective when received (Entores v Miles Far East). Where exactly email fits is less settled, and not covered in this bank.' },
 ];
 
+/** createOfflineTutor({ personaId? | persona? }): the bank is the same for every persona; name and colour follow the choice. */
 export function createOfflineTutor(opts = {}) {
-  const persona = opts.persona ?? TUTORS.hale;
+  const persona = opts.persona ?? (opts.personaId ? getPersona(opts.personaId) : TUTORS.hale);
   return {
     id: persona.id,
     name: persona.name,

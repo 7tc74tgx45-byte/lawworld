@@ -364,3 +364,32 @@ Cost $2.22 · 17 min · attempt 1
 - **Not done:** I haven't added `priorGaps` to the Claude intro beyond passing them into the context. Prior-session memory reads Gaps and Next-time headings, which T08 must write under exactly those headings.
 
 **Next:** T07: choose Claude or offline when the encounter opens, pass real curriculum subsections and the persona, add retry and "continue offline" on tutor errors, and show a clear message when a subsection has no offline bank. T08: write session notes with `## Gaps` and `## Next time` headings, which `sessionDigest` reads. Later: add offline banks for more subsections, and check the new case summaries against the vault reading.
+
+## T06 — done — 2026-10-24 01:53:35
+Cost $0.71 · 3 min · attempt 2
+
+**What changed:** T06 was already mostly built in the earlier partial attempt. This session I checked it against the spec and made two small additions. Build and all 131 tests pass, and I ticked T06 in TASKS.md. I haven't run the Claude tutor against the real API.
+
+What the spec's pieces now are:
+- **Personas:** `src/data/tutors.js` has Hale, Okafor and Chen, each with a style prompt and voice examples, plus shared rules.
+- **`extractSection`:** `src/logic/notes.js` has `extractSection(markdown, heading)`.
+- **Claude tutor:** `src/api/tutor.js` reads the note section live, adds earlier TUTOR-SESSION digests and open gaps, and asks for strict JSON.
+  - Parsing strips fences and retries once with a repair prompt.
+  - `answerQuestion` tries the note first and uses web search only if the note lacks the answer. Those answers are marked external.
+- **Offline tutor and banks:** full 7-stage banks exist for `contract-intro.what-is-contract`, `contract-agreement.objective-approach`, `contract-agreement.offer-and-acceptance` and `tort-trespass.assault`.
+
+Added this session:
+- **Persona-aware offline tutor:** `createOfflineTutor({ personaId })` now takes its name and colour from the chosen persona. The bank is the same for every persona. It used to be Hale only.
+- **New `tests/bankQuality.test.js`:** for every banked subsection and stages 2–5, the bank's own model answer must score solid, and a vague waffle answer must not, and must get a follow-up. All four banks pass. This also checks the offline evaluator can't mark down a player who writes exactly the right answer.
+- **Other tests:** `extractSection`, JSON parsing and repair, offline verdicts and the stubbed Claude tutor were already covered in `tests/tutorT06.test.js`.
+
+**Try it:** Run `npm test` to see the new tests. Nothing new shows in the browser yet, because the encounter UI isn't wired to the real curriculum or to Claude. That is T07. To try Claude in the console you need a Claude key and Obsidian token in Settings or `.env`, and the Obsidian certificate accepted. Then call `createClaudeTutor({ personaId: 'okafor' })`.
+
+**Design notes:** - **Case summaries need checking.** The Ch1 note names no cases, so its stage 4 uses Balfour v Balfour, Carlill and Currie v Misa. The assault handout only lists case names, so the summaries of Stephens v Myers, Tuberville v Savage, Read v Coker and R v Ireland are mine from standard law. Please check them against your reading. Thomas v NUM is deliberately not summarised, and the bank says the vault is silent on it.
+- **Chwee Kin Keong is a Singapore authority.** It is flagged as persuasive only in England.
+- **Banks are not playable yet.** The Contract Law rectangle still opens the demo subsection. T07 and T09 must pass the real curriculum subsection and the persona to `createOfflineTutor` and `createClaudeTutor`, and fall back to offline when Claude or Obsidian is down.
+- **Offline evaluation is keyword-based.** It can miss correct answers in unusual wording. It is labelled offline and is a fallback only.
+- **T08 dependency.** Prior-session memory reads the `## Gaps` and `## Next time` headings, so session notes must be written under exactly those headings.
+- **Prompts are untested live.** Expect to tune the Claude prompt wording after a first real session.
+
+**Next:** T07: choose Claude or offline when an encounter opens, pass real curriculum subsections and the persona, add retry and "continue offline" on tutor errors, and show a clear message when a subsection has no offline bank (`NoOfflineBankError`). T08: write session notes with `## Gaps` and `## Next time`.
