@@ -1136,3 +1136,9 @@ Cost $2.93 · 22 min · attempt 1
 
 The build or tests stayed broken, so tonight's changes for this task were discarded.
 Agent said: Stopped at a limit before finish_task.
+
+## T96 — rolled back — 2026-10-24 18:44:07
+Cost $3.00 · 20 min · attempt 2
+
+The build or tests stayed broken, so tonight's changes for this task were discarded.
+Agent said: Stopped at a limit before finish_task.
