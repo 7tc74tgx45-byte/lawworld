@@ -29,7 +29,7 @@ export function contextBlock({ subsection, noteSection, noteNote, priorSessions 
   if (subsection.keyConcepts?.length) parts.push(`KEY CONCEPTS: ${subsection.keyConcepts.join('; ')}`);
   if (subsection.keyCases?.length) parts.push(`KEY CASES NAMED IN THE NOTE: ${subsection.keyCases.join('; ')}`);
   if (subsection.statutes?.length) parts.push(`STATUTES NAMED IN THE NOTE: ${subsection.statutes.join('; ')}`);
-  parts.push(`NOTE SECTION${noteNote ? ` (${noteNote})` : ''}:\n"""\n${clipText(noteSection, 9000)}\n"""`);
+  parts.push(`NOTE SECTION${noteNote ? ` (${noteNote})` : ''}:\n"""\n${clipText(noteSection, 3000)}\n"""`);
   if (priorSessions.length) {
     parts.push('EARLIER SESSIONS ON THIS SUBSECTION (gaps and next-time notes):\n' + priorSessions.map((s) => `- ${clipText(s, 700).replace(/\n+/g, ' ')}`).join('\n'));
   }
