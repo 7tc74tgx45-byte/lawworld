@@ -1124,3 +1124,9 @@ Cost $0.60 · 3 min · attempt 1
 - **The vault changed since the curriculum was written.** The vault now has several notes with no district, which is what T92 is based on.
 
 **Next:** Run T91 next, then T92, then T93. If budget is tight, T91 alone gives the biggest learning gain.
+
+## T91 — rolled back — 2026-10-24 05:40:28
+Cost $2.18 · 11 min · attempt 1
+
+The build or tests stayed broken, so tonight's changes for this task were discarded.
+Agent said: Stopped at a limit before finish_task.
