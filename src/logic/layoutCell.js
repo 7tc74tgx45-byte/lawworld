@@ -31,7 +31,7 @@ export function layoutCell(district, ox = 0, oy = 0) {
     const tx = ox + 1 + col * SLOT;
     const ty = top ? oy : oy + BLD_H + LANE;
     const door = { tx: tx + 1, ty: top ? oy + BLD_H : oy + BLD_H + LANE - 1 };
-    return { id: sub.id, districtId: district.id, title: sub.title, tx, ty, w: BLD_W, h: BLD_H, door, side: top ? 'top' : 'bottom', ...(sub.type ? { type: sub.type } : {}), ...(sub.workshopFile ? { workshopFile: sub.workshopFile } : {}) };
+    return { id: sub.id, districtId: district.id, title: sub.title, tx, ty, w: BLD_W, h: BLD_H, door, side: top ? 'top' : 'bottom', ...(sub.type ? { type: sub.type } : {}), ...(sub.workshopFile ? { workshopFile: sub.workshopFile } : {}), ...(district.sourceFile ? { districtSourceFile: district.sourceFile } : {}) };
   });
   const midX = ox + Math.floor(w / 2);
   const laneY = oy + BLD_H + 1;

@@ -130,7 +130,7 @@ export function buildWorld(curriculum) {
       }
       for (const b of c.buildings) {
         for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) set(b.tx + x, b.ty + y, TILE.BUILDING);
-        buildings.push({ ...b, regionId: cr.id });
+        buildings.push({ ...b, regionId: cr.id, moduleId: cr.moduleId });
       }
       set(c.signpost.tx, c.signpost.ty, TILE.SIGN);
       set(c.brazier.tx, c.brazier.ty, TILE.BRAZIER);

@@ -348,7 +348,7 @@ export default class GameScene extends Phaser.Scene {
   interactWithLecture(b) {
     openLecturePanel({
       title: b.title,
-      sourceFile: b.sourceFile || b.workshopFile || null,
+      moduleId: b.moduleId || null,
       curriculum: this.curriculum,
     });
   }
