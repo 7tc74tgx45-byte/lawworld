@@ -216,3 +216,25 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - M key closes the map; clicking outside a district also closes it.
   - Tests: map renders without crashing when curriculum is empty; player dot updates on next open; clicking a district shows correct stats.
   - Done when: pressing M in the game shows a clear, readable world map with at least the main Contract and Tort regions visible and correctly labelled.
+
+- [ ] **T96 — Workshop buildings (problem question practice from Obsidian notes)**
+  - Why: Fynn has real workshop prep notes in the vault (e.g. `LAW7054-Tort-W4-Workshop-Prep.md`) with structured scenarios and IRAC model answers. A Workshop building in each law district lets him practice problem questions in-game, either prepping before the real session or reviewing after.
+  - Note format (already in vault, parse as-is):
+    - `# Workshop Prep — {Topic}` → workshop title
+    - `## Scenario N: {Name}` → problem question; everything before the first `**Issue:**` is the scenario text shown to the player
+    - `**Issue: ...**` blocks → IRAC model answer sections (kept private, used by tutor to evaluate)
+    - `## Things to Know Cold` → optional flash card round at the end (numbered list items become cards)
+  - Building: a garage/workshop aesthetic — grungier than lecture halls, flickering strip light, whiteboard. One Workshop building per district (Tort, Contract, Public Law), placed near the lecture buildings. Door label shows the most recent week available (e.g. "Workshop W4").
+  - Door interaction opens a week selector: lists all vault files matching `LAW{module}-{District}-W*-Workshop-*.md`, sorted by week number. Upcoming weeks shown in a different colour (prep mode); past weeks in gold (review mode). Week is "upcoming" if its number is higher than the current highest consolidated week for that district.
+  - Encounter flow per scenario:
+    1. Whiteboard shows the scenario text (everything before the first `**Issue:**` heading).
+    2. Player types a free-text IRAC answer (same text input as existing encounters).
+    3. Tutor evaluates against the concatenated `**Issue:**` blocks as the private model answer — uses the existing `evaluatePrompt` / `clientEvaluatePrompt` logic, no new AI calls needed.
+    4. Feedback shown: what was solid, what was missing, IRAC score 0–4.
+    5. One follow-up allowed if verdict is not solid.
+    6. After all scenarios: if `## Things to Know Cold` exists, run a quick-fire flash card round (show the numbered item, player types answer, tutor scores pass/fail against the note text).
+  - Progress: completing a workshop scenario awards seeds and stats (same as a client case). A fully completed workshop week lights a small indicator on the building door.
+  - Vault reading: same `readNote` + `extractSection` pipeline already used by the tutor. Files are listed via `listFiles()` filtered by the naming pattern. Cache the parsed scenarios for the session (don't re-fetch on each scenario).
+  - Offline: if Obsidian is unreachable, the door shows "Vault offline — connect Obsidian to access workshops." No crash, no empty screen.
+  - Tests: scenario parser extracts correct text and model answer for each `## Scenario` block; `## Things to Know Cold` items parse correctly; week sorter orders W1–W9 correctly; offline path shows the right message and does not attempt a fetch; completing all scenarios in a week marks it done.
+  - Done when: `npm run build` and `npm test` pass; with the Tort W4 workshop note in the vault, the Workshop building in the Tort district shows W4, entering runs through both Maria/Bill and Angela/Andy/Mike/Rajinder scenarios with tutor feedback, and the Things to Know Cold flash cards fire at the end.
