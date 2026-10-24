@@ -100,7 +100,7 @@ export function notSurePrompt(block, { stage, question, modelAnswer }) {
 }
 
 export function answerPrompt(block, question) {
-  return `${block}\n\nSTUDENT QUESTION: ${fence(question)}\n${UNTRUSTED}\n\nTASK: Decide whether the NOTE SECTION above answers this question. If it does, answer it from the note in 2 to 6 sentences and set "inNote": true. If the note does not cover it, set "inNote": false and put a one-sentence explanation of what the note does cover in "text". Never invent citations.\n${JSON_ONLY} Schema: {"inNote": boolean, "text": string}`;
+  return `${block}\n\nSTUDENT QUESTION: ${fence(question)}\n${UNTRUSTED}\n\nTASK: Decide whether the NOTE SECTION above answers this question. If it does, answer it from the note in 2 to 6 sentences and set "inNote": true — and if the student is asking which note or source you are drawing from, name the note file shown in the NOTE SECTION header above. If the note does not cover it, set "inNote": false and put a one-sentence explanation of what the note does cover in "text". Never invent citations.\n${JSON_ONLY} Schema: {"inNote": boolean, "text": string}`;
 }
 
 export function webAnswerPrompt(question, subsection) {
