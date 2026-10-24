@@ -673,3 +673,42 @@ The journal has four parts:
 **Design notes:** —
 
 **Next:** T12 (client NPCs). Once you've seen the journal in the browser, tune the spacing and colours in the "Journal (Tab)" block of `src/style.css`.
+
+## T12 — partial — 2026-10-24 03:38:11
+Cost $2.36 · 19 min · attempt 1
+
+**What changed:** I built and tested the rules for client NPCs, but there are no clients in the game yet. No NPCs wander, nothing happens when you walk up to one, and no scenario is generated. I ran out of budget before doing the Phaser and UI wiring.
+
+**What is built (all pure logic):**
+- `src/logic/clients.js` handles client choice and rewards.
+  - There is one client slot per region.
+  - Only subsections you have explored or consolidated can supply a problem.
+  - Open gaps raise a subsection's chance of being picked, "explored" counts slightly above "consolidated", and recently used subsections are down-weighted.
+  - The reward is worked out from the tutor's evaluations, not from any verdict a caller claims.
+  - Materials per verdict are 0, 1 or 2, plus a bonus for solid advice with an IRAC score of 3 or more. The material depends on the region: Precedent Scrolls (Contract), Case Reports (Tort), Statute Rolls (Public Law) or Ink (Foundations).
+  - Stats rise from the verdict: Application, IRAC Fluency, and a small bump to Case Recall or Statutory Interpretation on a solid answer.
+  - Open gaps are cleared on solid advice and re-logged otherwise.
+  - A client leaves after being served and the slot has a 5-minute cooldown.
+  - The client reacts honestly to the verdict, so a thin answer gets a confused client rather than praise.
+- `src/logic/clientEncounter.js` is the `client` mode of the encounter engine: scenario, advice, evaluation, at most one follow-up, then verdict.
+  - Advice under 15 characters is rejected and not counted.
+  - "I'm not sure" logs the concepts as gaps and caps the verdict at partial.
+  - Hints nudge and never repeat the model answer.
+  - You can leave at any time.
+  - There is no skip.
+- The save now has an optional `clients` slice (cooldowns, recent subsections, number served). It is normalised on load, and I did not bump the save version.
+- `tests/clients.test.js` adds 7 tests. `npm test` passes (209 tests) and `npm run build` passes.
+
+**Try it:** There is nothing to try in the browser yet. The only check is `node --test tests/clients.test.js`.
+
+**Design notes:** - **I built a separate client engine rather than extending `encounter.js`.** The main engine is hard-wired to 7 stages and a checkpoint, so a `mode` flag would have complicated it. The new engine reuses its rules (minimum answer length, hint limit, answer-leak check, evaluation normalisation).
+- **The tutor needs a new method.** Tutors must provide `clientScenario(ctx)`, which writes the client's problem, plus the existing `evaluate`, `hint` and `notSure`. Neither the Claude tutor nor the offline tutor has `clientScenario` yet.
+- **Offline fallback idea.** The simplest approach is to reuse each bank's stage-5 prompt, evaluation and hints as the client scenario. Every bank already has an IRAC client scenario there, so offline clients would cost no new content.
+- **Rewards.** An answer of "I'm not sure" followed by a solid restatement is capped at partial, as in the main loop.
+- **Vault.** I did not read the vault this session, so nothing new was extracted from it.
+
+**Next:** 1. Add `clientScenario(ctx)` to the offline tutor, reusing `bank[5].prompt`, `bank[5].evaluation`, `bank[5].hints` and `bank[5].modelAnswer`. Add the same to the Claude tutor with a new `clientPrompt` in `src/logic/tutorPrompts.js`. The prompt should ask for a layperson's voice, under 120 words, built from the note section and open gaps, returning `{text, modelAnswer}`.
+2. Create `src/game/ClientNpcs.js`. It should spawn one wandering sprite per region on walkable tiles, using the rule in `clients.js` (`onCooldown`) to decide whether the client is present. Add a simple random-walk update with `moveWithCollision`, a `client-<n>` texture drawn in `characterDraw.js`, a name label, and a prompt when the player is near. E should open the client overlay, which should reuse the encounter overlay in `src/ui/encounter.js` with a client engine and a hidden stage pip row.
+3. In `GameScene`, call `applyClientResult` through `saveStore.update(...)`, show `describeReward`, and show the client's reaction via `clientReaction`.
+4. Add the player's materials to the journal. They are in `save.inventory.materials` but not yet displayed.
+5. Tick T12 in TASKS.md once clients can be played in the browser.

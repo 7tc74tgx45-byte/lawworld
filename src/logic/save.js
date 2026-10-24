@@ -25,6 +25,7 @@
 
 import { createProgress, normaliseProgress } from './progress.js';
 import { normaliseSessions } from './sessionLog.js';
+import { normaliseClients } from './clients.js';
 
 export const SAVE_VERSION = 1;
 export const SAVE_KEY = 'lawworld.save';
@@ -123,6 +124,7 @@ export function normaliseSave(raw, now) {
     tutorPreference: Object.fromEntries(Object.entries(tp).filter(([k, v]) => k && typeof v === 'string' && v)),
     settings: normaliseSettings(s.settings),
     sessions: normaliseSessions(s.sessions),
+    clients: normaliseClients(s.clients),
   };
 }
 
