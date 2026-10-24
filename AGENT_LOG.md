@@ -1041,3 +1041,34 @@ Cost $1.04 · 4 min · attempt 1
 - **Seeds are cheap early:** the cap is per subsection per day, so a player could still replay different buildings. That matches the task as written.
 
 **Next:** T21 (spend materials) and T22 (garden retrieval variety). T13 and T14 are skipped tonight.
+
+## T21 — done — 2026-10-24 05:12:10
+Cost $1.86 · 8 min · attempt 1
+
+**What changed:** Materials can now be spent in two ways. `npm run build` passes and `npm test` passes (309 tests, 17 new in `tests/spend.test.js`). I could not play it in a browser tonight, so the UI wiring is untested by eye.
+
+- **Extra hint, in an encounter.** After the free hints for a stage or checkpoint question (`MAX_HINTS`, 2) are used, an "Extra hint (costs 1 <material>)" button appears.
+  - **Cost:** 1 material per extra hint, paid from the building's region material, or the richest other material if you have none of that.
+  - **Cap:** at most 2 extras per stage and per checkpoint question.
+  - **Still a nudge:** an extra hint is not an answer or an exchange. It cannot change a verdict, and the existing answer-leak check still applies.
+  - **Refund:** if the tutor fails to deliver the hint, the material is refunded.
+  - **Claude mode:** the prompt knows the hint is a paid extra and must not repeat earlier ones.
+  - **Offline mode:** the offline tutor gives a generic nudge, such as how many separate points the stage looks for. It never names the concepts.
+- **Light a brazier early, at a door.** The door panel shows a "Light it early (6 <region material>)" button.
+  - **Conditions:** the district must have at least one explored or consolidated building, and you must have enough of that region's own material.
+  - **What it does:** it only lights the flame, and the journal map shows 🔥. It consolidates nothing, unlocks nothing, and the saved record notes it was lit early.
+  - **Persistence:** the flame persists through the existing brazier sync. The early record is a new optional field, `braziers.early`, which needed no save version bump.
+- **Code.** New file: `src/logic/spend.js`. Changes: `encounter.js`, `encounterRules.js`, `offlineTutor.js`, `tutorPrompts.js`, `doorPanel.js`, `ui/encounter.js`, `GameScene.js`, `journal.js`, `save.js`, `garden.js`, `style.css`. `TASKS.md` has T21 ticked.
+
+**Try it:** 1. Run `npm run dev`. Materials come from advising client NPCs, so first answer a client in any region. Alternatively, edit `inventory.materials` in an exported save and re-import it.
+2. Open a building and use Hint twice. An "Extra hint (costs 1 …)" button appears. Click it to get a further nudge and see the material drop in the Tab journal.
+3. Walk to a door in a district you have explored and press E. You should see the brazier box with "Light it early (6 …)". With enough of that region's material, click it. The brazier lights and the journal map shows 🔥, but the next building stays locked.
+
+**Design notes:** - **Hints can't be bought out of a thin answer.** Extra hints are a bounded nudge (2 per stage or question) and never count as an answer, so they cannot raise a verdict or buy consolidation.
+- **Early brazier is cosmetic.** Lighting it early does not consolidate anything. That keeps "only the tutor moves progress" intact, and the door panel says so to the player.
+- **Costs are untested for balance.** The costs (1 per hint, 6 per brazier) are constants in `spend.js` and need playtesting. Materials come only from client NPCs, one per region with a 5-minute cooldown.
+- **Early flames are never removed.** If the curriculum later adds a building to a district, an early-lit brazier stays lit, the same as an earned one.
+- **No spend UI in the journal.** The journal stays read-only. It only explains where materials are spent and shows 🔥 for early-lit districts.
+- **Not covered by tests:** DOM wiring of the new buttons.
+
+**Next:** T22 (garden retrieval variety) is next. Playtest the costs. Consider letting materials buy something in the garden too, though VISION §4 only mentions hints and braziers.

@@ -14,12 +14,12 @@
 
 // Constants and pure rules (STAGES, computeOutcome, normaliseEvaluation, leaksAnswer) live in encounterRules.js.
 import {
-  STAGES, MIN_EXCHANGES, MIN_ANSWER_CHARS, MIN_QUESTION_CHARS, MAX_FOLLOWUPS, MAX_HINTS, CHECKPOINT_QUESTIONS, REFLECTIONS,
+  STAGES, MIN_EXCHANGES, MIN_ANSWER_CHARS, MIN_QUESTION_CHARS, MAX_FOLLOWUPS, MAX_HINTS, MAX_EXTRA_HINTS, CHECKPOINT_QUESTIONS, REFLECTIONS,
   computeOutcome, normaliseEvaluation, leaksAnswer,
 } from './encounterRules.js';
 
 export {
-  STAGES, MIN_EXCHANGES, MIN_ANSWER_CHARS, MAX_FOLLOWUPS, MAX_HINTS, CHECKPOINT_QUESTIONS,
+  STAGES, MIN_EXCHANGES, MIN_ANSWER_CHARS, MAX_FOLLOWUPS, MAX_HINTS, MAX_EXTRA_HINTS, CHECKPOINT_QUESTIONS,
   computeOutcome, normaliseEvaluation, leaksAnswer,
 };
 
@@ -55,7 +55,7 @@ export function createEncounter(arg, legacyTutor) {
     introShown: false,
     exchanges: 0,
     stages: {},
-    mcq: { index: 0, correct: 0, answered: 0, hints: 0, results: [] },
+    mcq: { index: 0, correct: 0, answered: 0, hints: 0, extra: 0, results: [] },
     reflections: [],
     gaps: [],
     transcript: [],
@@ -64,7 +64,7 @@ export function createEncounter(arg, legacyTutor) {
     verdictText: '',
   };
   for (const n of [2, 3, 4, 5]) {
-    state.stages[n] = { answers: [], evaluations: [], followUps: 0, hints: 0, notSure: false, answered: false, verdict: null, iracScore: null };
+    state.stages[n] = { answers: [], evaluations: [], followUps: 0, hints: 0, extra: 0, notSure: false, answered: false, verdict: null, iracScore: null };
   }
 
   let tutorName = tutor.name ?? 'Tutor';
@@ -197,6 +197,7 @@ export function createEncounter(arg, legacyTutor) {
     msgs.push(say('tutor', ev.feedback, { kind: 'feedback', correct }));
     state.mcq.index++;
     state.mcq.hints = 0;
+    state.mcq.extra = 0;
     if (state.mcq.index < CHECKPOINT_QUESTIONS) msgs.push(...(await openPrompt(6)));
     else msgs.push(...(await enterVerdict()));
     return out(msgs, { evaluation: ev });
@@ -317,6 +318,40 @@ export function createEncounter(arg, legacyTutor) {
     return out([say('tutor', `Hint: ${text}`, { kind: 'hint' })]);
   }
 
+  /**
+   * An extra hint bought with materials (T21), only once the free hints for this stage / question are used.
+   * opts.payForHint() -> { ok, message?, refund?() } does the paying (the engine never touches the inventory).
+   * It is still a nudge: same leak check, no effect on the verdict, and it is not an answer or an exchange.
+   */
+  async function extraHint() {
+    const cur = state.current;
+    if (!cur || (cur.kind !== 'open' && cur.kind !== 'mcq') || cur.reflection) {
+      return out([say('system', 'No hint is needed here.', { kind: 'system' })]);
+    }
+    const holder = state.stage === 6 ? state.mcq : state.stages[state.stage];
+    if (holder.hints < MAX_HINTS) {
+      return out([say('system', 'You still have free hints here. Use those first.', { kind: 'system' })]);
+    }
+    if (holder.extra >= MAX_EXTRA_HINTS) {
+      return out([say('tutor', 'That is the last extra nudge I can give without handing you the answer. Have a go, or tell me you are not sure and I will teach it.', { kind: 'hint' })]);
+    }
+    if (typeof opts.payForHint !== 'function') return reject('Extra hints are not available here.');
+    const paid = opts.payForHint();
+    if (!paid?.ok) return reject(paid?.message || 'You need materials for an extra hint. Advising a client earns them.');
+    let text;
+    try {
+      text = String((await tutor.hint(state.stage, cur, MAX_HINTS + holder.extra, ctx())) ?? '').trim();
+    } catch (e) {
+      paid.refund?.(); // nothing was delivered, so nothing is charged
+      throw e;
+    }
+    holder.extra++;
+    if (!text || leaksAnswer(text, secret)) {
+      text = 'Re-read the question and your own answer side by side: which part of what it asks have you not yet addressed?';
+    }
+    return out([say('tutor', `Extra hint: ${text}`, { kind: 'hint' })]);
+  }
+
   async function notSure() {
     const cur = state.current;
     if (!cur || (cur.kind !== 'open' && cur.kind !== 'mcq')) return out([]);
@@ -334,6 +369,7 @@ export function createEncounter(arg, legacyTutor) {
       msgs.push(say('tutor', `No problem, and I have logged it to revisit. ${info.explanation}`, { kind: 'feedback', correct: false }));
       state.mcq.index++;
       state.mcq.hints = 0;
+      state.mcq.extra = 0;
       if (state.mcq.index < CHECKPOINT_QUESTIONS) msgs.push(...(await openPrompt(6)));
       else msgs.push(...(await enterVerdict()));
       return out(msgs);
@@ -442,6 +478,7 @@ export function createEncounter(arg, legacyTutor) {
     next: guarded(next),
     submit: guarded(submit),
     hint: guarded(hint),
+    extraHint: guarded(extraHint),
     notSure: guarded(notSure),
     ask: guarded(ask),
     switchTutor: guarded(switchTutor),
@@ -449,6 +486,10 @@ export function createEncounter(arg, legacyTutor) {
     hasPending: () => pendingOpen !== null,
     leave,
     result,
-    status: () => ({ stage: state.stage, exchanges: state.exchanges, done: state.done, left: state.left, tutorName, prompt: state.current }),
+    status: () => {
+      const holder = state.stage === 6 ? state.mcq : state.stages[state.stage];
+      const hints = holder ? { free: Math.max(0, MAX_HINTS - holder.hints), extra: Math.max(0, MAX_EXTRA_HINTS - holder.extra) } : { free: 0, extra: 0 };
+      return { stage: state.stage, exchanges: state.exchanges, done: state.done, left: state.left, tutorName, prompt: state.current, hints };
+    },
   };
 }

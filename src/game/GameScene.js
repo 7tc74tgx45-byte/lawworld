@@ -15,6 +15,8 @@ import { curriculum } from '../data/curriculum.js';
 import { allDistricts, findSubsection, locateSubsection } from '../logic/curriculum.js';
 import { computeStates, openGaps } from '../logic/progress.js';
 import { syncBraziers } from '../logic/garden.js';
+import { brazierOffers, lightBrazierEarly, buyExtraHint, refundHint, hintOffer } from '../logic/spend.js';
+import { MATERIAL_LABEL } from '../logic/clients.js';
 import { openGarden } from '../ui/garden.js';
 import { createEncounterRecorder, recordOnPageHide } from '../logic/encounterRecorder.js';
 import Garden from './Garden.js';
@@ -267,7 +269,42 @@ export default class GameScene extends Phaser.Scene {
       hasOfflineBank: hasOfflineBank(b.id),
     });
     if (info.kind === 'study') sfx.play('door-open'); // a locked door stays silent
-    openDoorPanel(info, { onChoose: (tutorId) => this.startEncounter(sub, tutorId, info) });
+    const where = locateSubsection(curriculum, b.id);
+    const brazier = where ? brazierOffers(curriculum, state).find((o) => o.districtId === where.district.id) : null;
+    openDoorPanel(info, {
+      onChoose: (tutorId) => this.startEncounter(sub, tutorId, info),
+      brazier,
+      onLightBrazier: () => this.lightBrazier(where.district.id),
+    });
+  }
+
+  /** Spend region materials to light a district's brazier early (T21). Cosmetic: it unlocks and consolidates nothing. */
+  lightBrazier(districtId) {
+    const r = lightBrazierEarly(curriculum, this.saveStore.state, districtId);
+    if (r.ok) {
+      this.saveStore.update(() => r.save);
+      this.saveStore.save();
+      this.refreshStates();
+      this.showBanner(`The brazier at ${r.title} is lit early (${r.cost} ${MATERIAL_LABEL[r.key]}). It only fully counts once the tutor has consolidated every building.`, 9000);
+    }
+    return r;
+  }
+
+  /** Paying for an extra hint inside an encounter: spend now, refund if the tutor fails to deliver. */
+  makeHintPayer(regionId) {
+    return () => {
+      const r = buyExtraHint(this.saveStore.state, regionId);
+      if (!r.ok) return { ok: false, message: 'You have no materials to spend. Advising a client earns them.' };
+      this.saveStore.update(() => r.save);
+      this.saveStore.save();
+      return {
+        ok: true,
+        refund: () => {
+          this.saveStore.update((s) => refundHint(s, r.key, r.cost));
+          this.saveStore.save();
+        },
+      };
+    };
   }
 
   startEncounter(subsection, personaId, info) {
@@ -298,6 +335,9 @@ export default class GameScene extends Phaser.Scene {
       priorGaps: openGaps(this.saveStore.state.progress, { subsectionId: sub.id }),
       // Memory: earlier TUTOR-SESSION notes for this subsection (needs Obsidian; without it there is no memory).
       loadMemory: hasObsidian ? () => loadPriorSessions(sub) : undefined,
+        // T21: materials buy extra hints (beyond the free ones; still nudges)
+        payForHint: this.makeHintPayer(where?.region?.id),
+        hintOffer: () => hintOffer(this.saveStore.state, where?.region?.id),
       // The encounter's end writes its result into progress + save exactly once:
       // on the verdict (onFinish), or when the player leaves early (onClose, not finished).
       onFinish: (res) => {

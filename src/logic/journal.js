@@ -77,13 +77,16 @@ export function materialList(save) {
 /** Everything the journal shows. */
 export function buildJournal(curriculum, save) {
   const progress = save.progress;
+  // A brazier lit early with materials (T21) shows as lit in the map too, but the district's progress is unchanged.
+  const litIds = new Set(save.braziers?.lit ?? []);
+  const tree = moduleTree(curriculum, progress).map((m) => ({ ...m, districts: m.districts.map((d) => ({ ...d, lit: d.lit || litIds.has(d.id) })) }));
   return {
     stats: statBars(progress),
     materials: materialList(save),
     clientsServed: save.clients?.served ?? 0,
     seeds: save.inventory?.seeds ?? 0,
     plants: (save.garden?.plots ?? []).length,
-    tree: moduleTree(curriculum, progress),
+    tree,
     revisit: revisitList(curriculum, progress),
     sessions: recentSessions(save.sessions ?? []),
     districtCount: allDistricts(curriculum).length,

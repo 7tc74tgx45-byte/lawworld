@@ -38,7 +38,7 @@ function statsSection(stats) {
 }
 
 function materialsSection(materials, served, seeds = 0, plants = 0) {
-  const s = section('Materials', `Earned by advising clients (${served} served). Each region pays in its own material. Seeds come from solid answers and are planted in the hub garden.`);
+  const s = section('Materials', `Earned by advising clients (${served} served). Each region pays in its own material. Seeds come from solid answers and are planted in the hub garden. Materials buy extra hints inside an encounter (once the free hints are used) and light a district's brazier early at its door.`);
   const row = el('div', 'lw-mats');
   const seedChip = el('span', 'lw-mat' + (seeds ? '' : ' none'));
   seedChip.append(el('b', null, String(seeds)), document.createTextNode(` Seeds (${plants} planted)`));

@@ -151,7 +151,7 @@ export function syncBraziers(save, districts, states) {
   const newlyLit = earned.filter((id) => !stored.has(id));
   const lit = new Set([...[...stored].filter((id) => known.has(id)), ...earned]);
   if (!newlyLit.length) return { save, lit, newlyLit };
-  return { save: { ...save, braziers: { lit: [...stored, ...newlyLit] } }, lit, newlyLit };
+  return { save: { ...save, braziers: { ...save.braziers, lit: [...stored, ...newlyLit] } }, lit, newlyLit };
 }
 
 /** Everything the garden scene draws: one entry per plot slot. */

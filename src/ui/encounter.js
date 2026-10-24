@@ -21,9 +21,11 @@ export function isEncounterOpen() {
   return !!active;
 }
 
-export function openEncounter({ subsection, tutor, priorGaps, loadMemory, onOpen, onClose, onFinish, makeOfflineTutor }) {
+// payForHint() -> { ok, message?, refund?() } and hintOffer() -> { text, canAfford } come from the scene (T21): materials
+// buy an extra hint once the free ones for a stage are used. The overlay never touches the inventory itself.
+export function openEncounter({ subsection, tutor, priorGaps, loadMemory, onOpen, onClose, onFinish, makeOfflineTutor, payForHint, hintOffer }) {
   if (active) return active;
-  const engine = createEncounter({ subsection, tutor, priorGaps, loadMemory });
+  const engine = createEncounter({ subsection, tutor, priorGaps, loadMemory, payForHint });
   let busy = false;
   let closed = false;
   let mode = 'answer'; // 'answer' | 'ask'
@@ -69,10 +71,12 @@ export function openEncounter({ subsection, tutor, priorGaps, loadMemory, onOpen
   const buttons = el('div', 'lw-buttons');
   const bSubmit = button('Submit', 'primary');
   const bHint = button('Hint');
+  const bExtra = button('Extra hint');
+  bExtra.style.display = 'none';
   const bNot = button("I'm not sure");
   const bAsk = button('Ask a question');
   const bLeave = button('Leave', 'leave');
-  buttons.append(bSubmit, bHint, bNot, bAsk, bLeave);
+  buttons.append(bSubmit, bHint, bExtra, bNot, bAsk, bLeave);
   panel.append(head, pips, transcript, errBox, options, inputWrap, note, buttons);
 
   // ---- rendering
@@ -109,6 +113,18 @@ export function openEncounter({ subsection, tutor, priorGaps, loadMemory, onOpen
     });
   }
 
+  // The paid hint only appears after the free hints for this stage / question are used, and only while extras remain.
+  function renderExtra(v) {
+    const h = engine.status().hints;
+    const show = !!payForHint && v.showHint && !finished && mode !== 'ask' && h.free === 0 && h.extra > 0;
+    bExtra.style.display = show ? '' : 'none';
+    if (!show) return;
+    const offer = hintOffer?.() ?? { text: 'Extra hint (costs materials)', canAfford: true };
+    bExtra.textContent = offer.text;
+    bExtra.classList.toggle('poor', !offer.canAfford);
+    bExtra.title = 'A further Socratic nudge, paid for with materials. It never gives the answer and does not change how your answer is judged.';
+  }
+
   function render() {
     const v = viewState({ kind, mode, finished });
     options.style.display = v.showOptions ? '' : 'none';
@@ -122,6 +138,7 @@ export function openEncounter({ subsection, tutor, priorGaps, loadMemory, onOpen
     bLeave.textContent = v.leaveLabel;
     ta.placeholder = v.placeholder;
     renderPips();
+    renderExtra(v);
     if (v.showInput) ta.focus();
     else if (v.showSubmit) bSubmit.focus();
   }
@@ -178,7 +195,7 @@ export function openEncounter({ subsection, tutor, priorGaps, loadMemory, onOpen
       if (res && res.ok !== false && mode === 'ask') mode = 'answer';
       if (res?.rejected && res.messages?.length) {
         // A gentle rejection (too short, nothing to answer): show it, keep the typed text.
-        if (!closed) res.messages.forEach(addMsg);
+        if (!closed) { res.messages.forEach(addMsg); renderExtra(viewState({ kind, mode, finished })); }
         return res;
       }
       sync(res);
@@ -256,6 +273,7 @@ export function openEncounter({ subsection, tutor, priorGaps, loadMemory, onOpen
 
   bSubmit.onclick = doSubmit;
   bHint.onclick = () => run(() => engine.hint());
+  bExtra.onclick = () => run(() => engine.extraHint());
   bNot.onclick = () => run(() => engine.notSure());
   bAsk.onclick = () => {
     mode = mode === 'ask' ? 'answer' : 'ask';

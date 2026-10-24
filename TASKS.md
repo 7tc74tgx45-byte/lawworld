@@ -165,7 +165,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Cap seeds earned per subsection per day to stop farming a replayed building.
   - Refresh README (grey rectangle text, settings screen, garden, clients, journal, save).
 
-- [ ] **T21 — Spend materials (VISION §4)**
+- [x] **T21 — Spend materials (VISION §4)**
   - Materials buy an extra hint (beyond MAX_HINTS, still a nudge) or light a brazier early. Pure rules in `src/logic/`, UI in the journal or door panel, tests.
 
 - [ ] **T22 — Garden retrieval variety**

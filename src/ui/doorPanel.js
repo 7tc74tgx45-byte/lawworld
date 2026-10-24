@@ -6,7 +6,25 @@ import { openOverlay, el, button } from './dom.js';
 import { TUTOR_LIST } from '../data/tutors.js';
 import { STATE_LABEL } from '../game/palette.js';
 
-export function openDoorPanel(info, { onChoose } = {}) {
+// brazier: an offer from logic/spend.js brazierOffers() for this building's district (optional); onLightBrazier() pays and lights.
+function brazierBox(o, onLight, close) {
+  const box = el('div', 'lw-spend');
+  if (o.status === 'lit') {
+    box.append(el('p', 'lw-hint-note', `🔥 The brazier for ${o.title} is lit${o.early ? ' (lit early with materials)' : ''}.`));
+    return box;
+  }
+  box.append(el('p', 'lw-hint-note', `Brazier for ${o.title}: it lights by itself once every building here is consolidated. You can light it early for ${o.cost} ${o.label} (you have ${o.have}). That is only a flame: it does not consolidate or unlock anything.`));
+  const b = button(`Light it early (${o.cost} ${o.label})`, o.canLight ? '' : 'poor', () => {
+    const r = onLight?.();
+    if (r?.ok) close();
+  });
+  b.disabled = !o.canLight;
+  if (!o.canLight) b.title = `Needs ${o.cost} ${o.label}. Advise clients in this region to earn them.`;
+  box.append(b);
+  return box;
+}
+
+export function openDoorPanel(info, { onChoose, brazier, onLightBrazier } = {}) {
   const { panel, close } = openOverlay({ panelClass: 'small', onEscape: () => close() });
 
   if (info.kind === 'locked') {
@@ -23,6 +41,7 @@ export function openDoorPanel(info, { onChoose } = {}) {
   panel.append(el('h2', 'lw-h', info.title));
   panel.append(el('p', 'lw-hint-note', `${info.module}${info.district ? ' / ' + info.district : ''}. Status: ${STATE_LABEL[info.state] ?? info.state}.`));
   panel.append(el('p', null, info.note));
+  if (brazier && brazier.status !== 'unvisited') panel.append(brazierBox(brazier, onLightBrazier, close));
   if (!info.canPlay) {
     panel.append(button('Close', 'primary', close));
     return { close };

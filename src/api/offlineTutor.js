@@ -55,6 +55,24 @@ export function stageConcepts(st, stage, subsection) {
   return [`${subsection?.title ?? 'this topic'}: ${skill}`];
 }
 
+/**
+ * Extra (paid) hint for an open stage. It gives the NUMBER of points the stage looks for, never their names
+ * (labels can contain a case name or the rule itself). A nudge, not the answer.
+ */
+export function extraStageNudge(st, n = 0) {
+  const k = (st?.conceptLabels ?? []).filter(Boolean).length;
+  if (n === 0 && k > 1) {
+    return `This question looks for about ${k} separate points. Count the distinct points in your answer: if you have fewer, ask which part of the question you have not yet addressed.`;
+  }
+  return 'Write one sentence for each part the question asks for, then read it back and ask which part is thinnest.';
+}
+
+export function extraMcqNudge(n = 0) {
+  return n === 0
+    ? 'Rule out the option you are surest is wrong first, then test the remaining two against the exact wording of the question.'
+    : 'Ask which option would still be true if the facts were slightly different: the right one rests on the rule, not on the facts.';
+}
+
 const NOTE_QA = [
   { rx: ['postal'], text: 'The postal rule (Adams v Lindsell) says acceptance by post is complete on posting, if post is a reasonable method. It is an exception to the general receipt rule, and it does not cover revocation (Byrne v Van Tienhoven) or instant communications (Entores).' },
   { rx: ['invitation', 'itt'], text: 'An invitation to treat invites others to make offers and does not bind the person inviting. Standard examples are shop displays (Fisher v Bell, Pharmaceutical Society v Boots), and a price given in reply to a request for information (Harvey v Facey). Adverts can still be offers if worded as a firm promise (Carlill).' },
@@ -109,10 +127,13 @@ export function createOfflineTutor(opts = {}) {
       const bank = bankFor(ctx.subsection);
       if (stage === 6) {
         const q = bank[6].questions[ctx.mcqIndex];
-        return q.hints[Math.min(index, q.hints.length - 1)];
+        if (index >= q.hints.length) return extraMcqNudge(index - q.hints.length);
+        return q.hints[index];
       }
-      const h = bank[stage].hints;
-      return h[Math.min(index, h.length - 1)];
+      const st = bank[stage];
+      // Bought hints (index beyond the bank's own) never repeat a free one: they point at the stage's own checklist.
+      if (index >= st.hints.length) return extraStageNudge(st, index - st.hints.length);
+      return st.hints[index];
     },
 
     notSure(stage, prompt, ctx) {

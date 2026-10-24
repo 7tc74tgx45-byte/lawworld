@@ -79,13 +79,13 @@ export function evaluatePrompt(block, { stage, question, modelAnswer, answers, f
 }
 
 export function hintPrompt(block, { stage, question, modelAnswer, answers, index }) {
-  return `${block}\n\nSTAGE ${stage}. QUESTION: ${question}\nMODEL ANSWER (private): ${modelAnswer || '(none)'}\nSTUDENT'S ANSWERS SO FAR: ${answers.length ? answers.map(fence).join(' / ') : '(nothing yet)'}\n${UNTRUSTED}\n\nTASK: Give hint number ${index + 1} of 2. A hint is a Socratic nudge: one or two sentences that point at where to look or ask a guiding question. ${
-    index > 0 ? 'It may be a little more pointed than the first hint. ' : ''
+  return `${block}\n\nSTAGE ${stage}. QUESTION: ${question}\nMODEL ANSWER (private): ${modelAnswer || '(none)'}\nSTUDENT'S ANSWERS SO FAR: ${answers.length ? answers.map(fence).join(' / ') : '(nothing yet)'}\n${UNTRUSTED}\n\nTASK: Give hint number ${index + 1}${index >= 2 ? ' (an extra hint the student paid for, after the free ones)' : ' of 2'}. A hint is a Socratic nudge: one or two sentences that point at where to look or ask a guiding question. ${
+    index > 0 ? 'It may be a little more pointed than the earlier hints, and must not repeat them. ' : ''
   }NEVER state the answer, the rule itself, or the name of the case the answer depends on.\n${JSON_ONLY} Schema: {"text": string}`;
 }
 
 export function mcqHintPrompt(block, { q, index }) {
-  return `${block}\n\nMULTIPLE-CHOICE QUESTION: ${q.text}\nOPTIONS: ${q.options.join(' | ')}\nTASK: Give hint ${index + 1} of 2 as a Socratic nudge in one sentence. Do not say which option is correct.\n${JSON_ONLY} Schema: {"text": string}`;
+  return `${block}\n\nMULTIPLE-CHOICE QUESTION: ${q.text}\nOPTIONS: ${q.options.join(' | ')}\nTASK: Give hint ${index + 1}${index >= 2 ? ' (an extra hint the student paid for; do not repeat earlier ones)' : ' of 2'} as a Socratic nudge in one sentence. Do not say which option is correct.\n${JSON_ONLY} Schema: {"text": string}`;
 }
 
 export function notSurePrompt(block, { stage, question, modelAnswer }) {

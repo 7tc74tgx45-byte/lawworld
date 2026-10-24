@@ -16,6 +16,7 @@ export const MIN_ANSWER_CHARS = 15;
 export const MIN_QUESTION_CHARS = 5; // a short real question ("what is a bailment?") is fine; only answers need 15
 export const MAX_FOLLOWUPS = 2;
 export const MAX_HINTS = 2;
+export const MAX_EXTRA_HINTS = 2; // bought with materials (T21), per stage / per checkpoint question; still nudges, never the answer
 export const CHECKPOINT_QUESTIONS = 3;
 
 export const REFLECTIONS = [

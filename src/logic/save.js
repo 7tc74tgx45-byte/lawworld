@@ -120,7 +120,11 @@ export function normaliseSave(raw, now) {
       materials: Object.fromEntries(MATERIAL_KEYS.map((k) => [k, count(mats[k])])),
     },
     garden: { plots: (Array.isArray(garden.plots) ? garden.plots : []).map(normalisePlot).filter(Boolean) },
-    braziers: { lit: [...new Set((Array.isArray(braziers.lit) ? braziers.lit : []).filter((x) => typeof x === 'string' && x))] },
+    braziers: {
+      lit: [...new Set((Array.isArray(braziers.lit) ? braziers.lit : []).filter((x) => typeof x === 'string' && x))],
+      // T21: districts lit early with materials (optional; kept as a record of how a brazier was lit)
+      early: [...new Set((Array.isArray(braziers.early) ? braziers.early : []).filter((x) => typeof x === 'string' && x))],
+    },
     tutorPreference: Object.fromEntries(Object.entries(tp).filter(([k, v]) => k && typeof v === 'string' && v)),
     settings: normaliseSettings(s.settings),
     sessions: normaliseSessions(s.sessions),
