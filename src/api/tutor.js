@@ -4,9 +4,9 @@
 // Dependencies are injectable (opts.call / readNote / listFiles) so the provider can be tested without a network.
 
 import { callClaude } from './claude.js';
-import { readNote as obsidianRead, listFiles as obsidianList } from './obsidian.js';
+import { readNote as obsidianRead, listFiles as obsidianList, searchNotes as obsidianSearch } from './obsidian.js';
 import { getPersona, personaSystemPrompt } from '../data/tutors.js';
-import { extractSection } from '../logic/notes.js';
+import { extractSection, clipText } from '../logic/notes.js';
 import { loadPriorSessions } from './sessionNotes.js';
 import { formatSessionMemory } from '../logic/sessionNote.js';
 import { parseWithRepair, REPAIR_PROMPT, cleanPrompt, cleanEvaluation, cleanText } from '../logic/tutorJson.js';
@@ -83,7 +83,26 @@ export function createClaudeTutor(opts = {}) {
       // The scene may already have loaded earlier sessions (ctx.memory); otherwise read them here. Failure = no memory.
       const sessions = Array.isArray(ctx.memory) ? ctx.memory : await loadPriorSessions(sub, { listFiles, readNote });
       const priorSessions = sessions.map((s) => formatSessionMemory(s)).filter(Boolean);
-      entry = { base: { subsection: sub, noteSection, noteNote, priorSessions }, mcq: null, secrets: new Map() };
+      // Vault-wide supplementary search: pull 2-3 relevant notes beyond the primary one,
+      // so cases/rules that live in a different note are still visible to the tutor.
+      let supplementaryNotes = [];
+      try {
+        const searchQuery = [sub.title, sub.module].filter(Boolean).join(' ');
+        const searchResults = await (opts.searchNotes ?? obsidianSearch)(searchQuery);
+        const extras = (Array.isArray(searchResults) ? searchResults : [])
+          .map((r) => r.filename ?? r.path ?? '')
+          .filter((f) => f && f !== sub.sourceFile && !f.includes('TUTOR-SESSION'))
+          .slice(0, 3);
+        for (const filename of extras) {
+          try {
+            const raw = await readNote(filename);
+            const excerpt = clipText(raw, 1200);
+            supplementaryNotes.push({ filename, excerpt });
+          } catch { /* skip unreadable notes */ }
+        }
+      } catch { /* vault search unavailable — proceed without */ }
+
+      entry = { base: { subsection: sub, noteSection, noteNote, priorSessions, supplementaryNotes }, mcq: null, secrets: new Map() };
       cache.set(sub.id, entry);
     }
     const gaps = (ctx.priorGaps ?? []).filter((g) => !g.resolved);

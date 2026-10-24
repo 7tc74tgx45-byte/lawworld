@@ -23,13 +23,20 @@ export const STAGE_BRIEF = {
 };
 
 /** The context block shared by every call: note, earlier sessions, gaps, key lists. */
-export function contextBlock({ subsection, noteSection, noteNote, priorSessions = [], gaps = [] }) {
+export function contextBlock({ subsection, noteSection, noteNote, priorSessions = [], gaps = [], supplementaryNotes = [] }) {
   const parts = [];
   parts.push(`SUBSECTION: ${subsection.module ? subsection.module + ': ' : ''}${subsection.title}`);
   if (subsection.keyConcepts?.length) parts.push(`KEY CONCEPTS: ${subsection.keyConcepts.join('; ')}`);
   if (subsection.keyCases?.length) parts.push(`KEY CASES NAMED IN THE NOTE: ${subsection.keyCases.join('; ')}`);
   if (subsection.statutes?.length) parts.push(`STATUTES NAMED IN THE NOTE: ${subsection.statutes.join('; ')}`);
   parts.push(`NOTE SECTION${noteNote ? ` (${noteNote})` : ''}:\n"""\n${clipText(noteSection, 3000)}\n"""`);
+  if (supplementaryNotes.length) {
+    // Additional vault notes found by keyword search — may contain cases, statutes, or context not in the primary note.
+    parts.push(
+      'SUPPLEMENTARY VAULT NOTES (from other notes in the student vault that may contain relevant cases or rules not in the primary note — use these to credit answers that draw on correct law from anywhere in the vault):\n' +
+      supplementaryNotes.map(({ filename, excerpt }) => `--- ${filename} ---\n${excerpt}`).join('\n\n')
+    );
+  }
   if (priorSessions.length) {
     parts.push('EARLIER SESSIONS ON THIS SUBSECTION (gaps and next-time notes):\n' + priorSessions.map((s) => `- ${clipText(s, 700).replace(/\n+/g, ' ')}`).join('\n'));
   }
