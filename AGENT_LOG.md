@@ -552,3 +552,27 @@ Without a token, the banner says no session note was written.
 - **Error text:** the banner shows raw error text from a failed write.
 
 **Next:** T09 builds the world from the curriculum and adds the study door, with the tutor picker and `chooseMode`. That will make session notes carry real module and district names and use Claude with live notes.
+
+## T09 — partial — 2026-10-24 02:46:50
+Cost $2.10 · 24 min · attempt 1
+
+**What changed:** T09 is only started. The game still shows the old green grid and the grey "Contract Law" demo box. I wrote one small piece of the layout code, and the build and all 167 tests pass. I ran out of output budget before writing the rest: the hub and region placement, paths and collision, the Phaser world, region banners, the E-at-door flow with tutor picker and padlock tooltip, and building colours.
+
+**Try it:** Nothing new is visible in the browser yet; run `npm test` to see the new layout tests.
+
+**Design notes:** - **What exists:** `src/logic/layoutCell.js` lays out one district as two rows of 3×2 buildings facing a 3-row walkable lane, with the signpost and brazier in the middle of the lane. It also has `packCells`, which packs cells into rows with a gap between them.
+- **Tests:** `tests/layoutCell.test.js` checks every real district in the curriculum. It confirms there is one building per subsection, no building overlaps another, doors sit on the lane, and layout is deterministic. `packCells` is checked for overlap and width.
+- **Gap in the tests:** "Every door reachable from the hub" is not tested yet, because the hub and region placement that would make it testable is not written.
+- **Rewrite risk:** two of my large `write_file` calls were cut off for length, so I wrote the file in pieces. Plan the next session in small files.
+- **Size to plan for:** the curriculum has 31 districts and about 170 subsections. The largest districts have 10–12 subsections, so each cell is about 25×7 tiles. Each region (Foundations/Contract/Tort/Public Law) needs about 7–10 cells, so each region will be a few hundred tiles wide. That is fine for Phaser if the ground is a RenderTexture or a few big textures rather than one image per tile.
+- **Door interaction:** only buildings with an offline bank can run without Claude and Obsidian. Those are the first three Contract subsections and the first Tort one. Other buildings need both Claude and Obsidian. This is already handled by `chooseMode`, and the picker should say so rather than fail.
+
+**Next:** 1. `src/logic/layout.js`: `buildWorld(curriculum)` returns a map of `{ cols, rows, tiles, buildings, regions, hub, spawn }`.
+   - Place the hub in the centre, with Foundations (spring) as the hub town.
+   - Put Contract east, Tort south and Public Law north, joined to the hub by path tiles.
+   - Pack each region's district cells with `packCells`, and carve path tiles from the hub to each cell's lane.
+   - Border each region with trees and water.
+   - Add a pure `pathExists(world, from, to)` BFS and test that every door is reachable from the hub spawn. Also test that nothing overlaps and that the layout is deterministic.
+2. Rewrite `GameScene.js`: render tiles from the world data, and add static collision bodies for buildings, trees, water and fences. Bound the camera and physics world to the map, and show a region banner on entering a region.
+3. Draw building colours by `computeStates` state: grey for locked with a padlock, blue for available, amber for explored, green for consolidated. Draw an unlit brazier and a signpost per district.
+4. Door E: for an available or explored building, show a tutor picker (default `suggestedTutor` or the saved `tutorPreference`), then `chooseMode`. Run the Claude tutor and `loadPriorSessions` if both keys are set; otherwise run the offline tutor if there is a bank, and say why if there isn't. For a locked building, show a padlock tooltip listing `unmetPrerequisites` by title. Remove the demo box, and save `player.region`.
