@@ -55,7 +55,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Stats update from evaluation results (Case Recall from authority stage, Statutory Interpretation from precision on statutes, Application from scenario, IRAC Fluency from IRAC structure score).
   - Tests: Causation stays locked until Duty of Care and Breach are consolidated; explored ≠ unlock; rollups correct; gaps resolve when later answered solidly.
 
-- [ ] **T04 — Save system** (`src/logic/save.js` + a thin browser adapter)
+- [x] **T04 — Save system** (`src/logic/save.js` + a thin browser adapter)
   - Versioned schema (`version: 1`) covering everything in VISION §7; `migrate()`; storage injected so it's testable; debounced autosave; export/import JSON (file input + download link).
   - Tests with an in-memory storage: round-trip, corrupted save falls back to a fresh game without throwing, migration hook runs.
 

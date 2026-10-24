@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { openEncounter } from '../ui/encounter.js';
 import { createOfflineTutor } from '../api/offlineTutor.js';
 import { demoSubsection } from '../data/demoSubsection.js';
+import { getSaveStore } from '../ui/saveAdapter.js';
 
 const TILE_SIZE = 32;
 const MAP_COLS = 30;
@@ -39,12 +40,17 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
-    // Player — centred on the map
-    this.player = this.physics.add.image(
-      (MAP_COLS * TILE_SIZE) / 2,
-      (MAP_ROWS * TILE_SIZE) / 2,
-      'player'
-    );
+    // Save: restore exactly where the player was (VISION §7)
+    this.saveStore = getSaveStore();
+    const saved = this.saveStore.state.player;
+    const hasSave = this.saveStore.loadStatus === 'loaded';
+    const startX = hasSave ? Phaser.Math.Clamp(saved.x, 0, MAP_COLS * TILE_SIZE) : (MAP_COLS * TILE_SIZE) / 2;
+    const startY = hasSave ? Phaser.Math.Clamp(saved.y, 0, MAP_ROWS * TILE_SIZE) : (MAP_ROWS * TILE_SIZE) / 2;
+
+    // Player — centred on the map (or where the save left them)
+    this.player = this.physics.add.image(startX, startY, 'player');
+    this.lastSavedPos = { x: Math.round(startX), y: Math.round(startY) };
+    this.time.addEvent({ delay: 2000, loop: true, callback: () => this.savePosition() });
     this.player.setCollideWorldBounds(true);
 
     // Constrain physics world to map size
@@ -113,6 +119,15 @@ export default class GameScene extends Phaser.Scene {
       .setScrollFactor(0);
   }
 
+  /** Autosave the player's position, but only when they actually moved. */
+  savePosition() {
+    const x = Math.round(this.player.x);
+    const y = Math.round(this.player.y);
+    if (x === this.lastSavedPos.x && y === this.lastSavedPos.y) return;
+    this.lastSavedPos = { x, y };
+    this.saveStore.update((s) => ({ ...s, player: { ...s.player, x, y } }));
+  }
+
   openDemoEncounter() {
     if (this.encounterOpen) return;
     this.encounterOpen = true;
@@ -124,6 +139,7 @@ export default class GameScene extends Phaser.Scene {
         this.setKeyboardForOverlay(false);
         this.encounterOpen = false;
         const gaps = res.gaps.length;
+          this.saveStore.applyEncounter(res, { subsection: demoSubsection });
         this.banner.setText(`${demoSubsection.title}: ${res.outcome.toUpperCase()}${gaps ? ` (${gaps} gap${gaps > 1 ? 's' : ''} logged)` : ''}`);
         this.time.delayedCall(6000, () => this.banner.setText(''));
       },

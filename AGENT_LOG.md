@@ -256,3 +256,31 @@ Cost $0.69 · 5 min · attempt 1
 - **`iracScore` source:** the offline evaluator only sets `iracScore` on the scenario stage, so that's where IRAC Fluency comes from. The Claude tutor (T06) should return it for stages 3–5 too if wanted.
 
 **Next:** T04 (save system) can store the progress object as-is, since it is plain JSON, and use `normaliseProgress` when loading. T05 and T06 should keep concept labels consistent, as noted above.
+
+## T04 — done — 2026-10-24 01:30:51
+Cost $0.51 · 3 min · attempt 1
+
+**What changed:** The save system is in. `npm run build` passes, and `npm test` passes with 85 tests (18 new in `tests/save.test.js`). I ticked T04 in TASKS.md.
+
+**What it does**
+- **Schema:** the save is `version: 1` and covers everything in VISION §7. That is player position, region and facing, cat position, the T03 progress object (subsection states, gaps, stats), inventory, garden plots, lit braziers, tutor preference per subsection, and non-secret settings.
+- **Loading:** `loadSave` never throws. If the stored save is corrupt, unversioned-junk or from a newer version, you get a fresh game, and the bad text is copied to `lawworld.save.backup` first so autosave can't wipe it.
+- **Repairs:** a save that is only partly broken keeps its usable parts. Bad entries are dropped and bad numbers are reset to defaults.
+- **Migration:** `migrate()` runs a chain of numbered steps. The one existing step upgrades unversioned prototype saves (step 0→1). Future schema changes just add a new step.
+- **Autosave:** it is debounced, so a burst of changes makes one write. `flush()` writes immediately, and the browser adapter calls it on `pagehide` and when the tab is hidden.
+- **Export and import:** the file input and download link are in `src/ui/saveAdapter.js` as `downloadSave()` and `pickAndImportSave()`. A bad import changes nothing and returns a plain message.
+- **Storage:** it is injected, so the tests use an in-memory fake. `src/logic/saveStore.js` holds the current save and has `update`, `applyEncounter`, `importText`, `exportText`, `save` and `reset`.
+- **In the game:** `GameScene` now restores your position on reload and autosaves it every 2 seconds if you moved. When an encounter closes, whether finished or left, its result goes through `applyEncounterResult` into progress and is saved straight away. Opening and leaving without answering saves nothing.
+
+**What the tests cover:** round-trip, corrupt and throwing storage, partial repair, the migration hook and chain, debounce and flush, export/import round-trip and rejection, and reload restoring consolidated state and unlocks.
+
+**Try it:** Run `npm run dev` and walk away from the start point. Wait about 2 seconds, then reload the page: you should reappear where you stopped. Then press E on the grey "Contract Law" rectangle, answer a couple of questions and click Leave. In dev tools, under Application → Local Storage, `lawworld.save` should now show the subsection as `explored`, with any gaps logged. Setting `lawworld.save` to garbage and reloading starts a fresh game and keeps the garbage under `lawworld.save.backup`. There is no Save, Export or Import button yet. They arrive with the menu in T07, which calls `downloadSave()` and `pickAndImportSave()`.
+
+**Design notes:** - **API keys and tokens are not in the save.** A save file is something you might export or share, and the Claude key and Obsidian token already live in `src/settings.js`. The `settings` section of the save holds only non-secret gameplay preferences, and anything with a key-like name (key, token, secret, password, authorization) is stripped. The tests check this. The vision lists "settings" as saved, so this is a deliberate narrowing, not an oversight.
+- **Import is stricter than load.** An unversioned JSON file that doesn't look like a save is rejected on import. Otherwise importing a random file would replace your game with a blank one. Load still treats an unversioned file as a prototype save.
+- **A corrupt save is never silently overwritten.** The raw text is backed up to `lawworld.save.backup` before the fresh game takes over. There is no UI for recovering from the backup yet. It is only visible in dev tools.
+- **Only the demo encounter feeds progress for now.** `GameScene` applies the demo subsection's result to progress. T09 will route real buildings through the same `saveStore.applyEncounter`.
+- **Placeholder defaults:** the cat position and the player's region field are saved but not used until T09 and T10. The default region is `hub` and the default spawn is (480, 320).
+- **`GameScene` saves position by polling.** It checks every 2 seconds and only writes if the player moved. That is simple and cheap, and the worst case is losing about 2 seconds of walking on a crash.
+
+**Next:** T05 is already largely done in `encounter.js` from T00. A sensible check is to confirm it against the T05 spec, in particular the `createEncounter({subsection, tutor, priorGaps})` signature, which currently takes positional arguments. T07 should add Save, Export and Import buttons and a "start a new game" confirmation using `saveStore.reset()`.
