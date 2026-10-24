@@ -14,6 +14,9 @@ export default class Garden {
     this.sprites = this.plots.map((p) => scene.add.image(p.tx * TILE_SIZE, p.ty * TILE_SIZE, 'plot-empty').setOrigin(0).setDepth(p.ty * TILE_SIZE + 8));
     this.keys = this.plots.map(() => 'plot-empty');
     this.view = [];
+    // "Needs water" droplet over each thirsty plot; it bobs gently so it catches the eye.
+    this.icons = this.plots.map((p) => scene.add.image(p.tx * TILE_SIZE + TILE_SIZE / 2, p.ty * TILE_SIZE - 6, 'needs-water').setOrigin(0.5, 1).setDepth(p.ty * TILE_SIZE + 40).setVisible(false));
+    this.bob = scene.tweens?.add({ targets: this.icons, y: '-=3', duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   }
 
   /** Redraw from the save (call after planting/watering and every so often, since plants wither with time). */
@@ -22,6 +25,7 @@ export default class Garden {
     this.plots.forEach((p, i) => {
       const v = this.view[i];
       if (!v) return;
+      this.icons[i].setVisible(!v.empty && !!v.thirsty);
       const key = v.empty ? 'plot-empty' : plantKey(v.stage, v.status === 'withered');
       if (key !== this.keys[i]) {
         this.keys[i] = key;

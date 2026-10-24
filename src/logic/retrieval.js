@@ -2,15 +2,71 @@
 // only when no Claude tutor is available (clearly labelled offline in the UI). Pure JS.
 
 import { MIN_ANSWER_CHARS } from './encounterRules.js';
+import { evaluateByConcepts } from './keywordEval.js';
 
 const STOP = new Set(['the', 'a', 'an', 'of', 'to', 'in', 'and', 'or', 'is', 'on', 'for', 'by', 'with', 'as', 'at', 'it', 'be', 'that', 'this', 'are']);
 const sigWords = (s) => [...new Set(String(s ?? '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !STOP.has(w)))];
 const stem = (w) => w.replace(/(ing|ed|es|s)$/, '');
 
-/** The question the plant asks. It names the concept and the building it came from; it never gives the answer. */
-export function retrievalQuestion(plot, subsection) {
+/** The three kinds of retrieval question (T22). Rotating them stops the player memorising one phrasing. */
+export const QUESTION_KINDS = ['rule', 'case', 'apply'];
+
+const hashStr = (s) => [...String(s ?? '')].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
+
+/**
+ * Which kind to ask this time. Each watering round moves on to the next kind, starting from a point that depends on
+ * the concept (so two plants planted together do not both begin with "rule"). A 'case' question needs a case or a
+ * statute in the building; when there is none it is skipped, so we never ask for a case that does not exist.
+ */
+export function pickKind(plot, subsection, { available = QUESTION_KINDS } = {}) {
+  const kinds = QUESTION_KINDS.filter((k) => available.includes(k) && (k !== 'case' || (subsection?.keyCases?.length || subsection?.statutes?.length)));
+  const list = kinds.length ? kinds : ['rule'];
+  return list[((plot?.waterings ?? 0) + hashStr(plot?.concept)) % list.length];
+}
+
+/** Generic templates (used for Claude, and offline for buildings with no retrieval bank). They name the concept, never the answer. */
+export function retrievalQuestion(plot, subsection, kind = 'rule') {
   const where = subsection?.title ? ` (from "${subsection.title}")` : '';
-  return `Your plant is thirsty. Without looking at your notes, explain "${plot.concept}"${where}: what is the rule or idea, and name any case or statute that goes with it.`;
+  const c = plot.concept;
+  if (kind === 'case') {
+    const authority = subsection?.keyCases?.length
+      ? 'Name the case that goes with it (or another you know), then give its facts, the rule it decided, and why it matters.'
+      : 'Name the statutory section or authority that goes with it, and say what it provides.';
+    return `Your plant is thirsty. Without looking at your notes: "${c}"${where} has authority behind it. ${authority}`;
+  }
+  if (kind === 'apply') {
+    return `Your plant is thirsty. Without looking at your notes: a client's problem turns on "${c}"${where}. Invent two or three facts that would engage it, then advise in Issue, Rule, Application, Conclusion order: what must be shown, how the facts measure up, and what you would tell the client.`;
+  }
+  return `Your plant is thirsty. Without looking at your notes, state the rule for "${c}"${where} precisely: what is the idea or test, what are its parts, and which case or statute goes with it?`;
+}
+
+/**
+ * The full plan for one watering: { kind, question, item } where `item` is a banked offline item (or null).
+ * With `useBank` and a bank for this building, the question comes from the bank (concrete facts for 'apply').
+ */
+export function planRetrieval(plot, subsection, { bank = null, useBank = false } = {}) {
+  const items = useBank && Array.isArray(bank) && bank.length ? bank : null;
+  const kind = pickKind(plot, subsection, { available: items ? [...new Set(items.map((i) => i.kind))] : QUESTION_KINDS });
+  if (items) {
+    const ofKind = items.filter((i) => i.kind === kind);
+    const concept = String(plot.concept ?? '');
+    const item = ofKind.find((i) => i.about && new RegExp(i.about, 'i').test(concept)) ?? ofKind[0] ?? items[0];
+    return { kind: item.kind, question: `Your plant is thirsty. ${item.q}`, item };
+  }
+  return { kind, question: retrievalQuestion(plot, subsection, kind), item: null };
+}
+
+const KIND_LABEL = { rule: 'rule question', case: 'case question', apply: 'apply-to-facts question' };
+export const kindLabel = (k) => KIND_LABEL[k] ?? 'question';
+
+/** Offline judge for a banked item: concept overlap (the same rules as the encounter bank), labelled by the UI. */
+export function evaluateRetrievalItem(answer, item, plot) {
+  const text = String(answer ?? '').trim();
+  if (text.length < MIN_ANSWER_CHARS) return { rejected: true, feedback: `Write a sentence or two (at least ${MIN_ANSWER_CHARS} characters). That was not counted.` };
+  const ev = evaluateByConcepts(text, { concepts: item.concepts, solidAt: item.solidAt ?? 0.75, partialAt: 0.4, requiredIds: item.requiredIds ?? [], wrongRx: item.wrongRx ?? [], wrongNote: item.wrongNote, conclusionId: 'conc' });
+  const label = plot?.concept ?? 'this concept';
+  const tail = ev.verdict === 'solid' ? '' : ` A model answer, so the point lands: ${item.model}`;
+  return { verdict: ev.verdict, feedback: `${ev.feedback}${tail}`, conceptsHit: ev.verdict === 'solid' ? [label] : [], conceptsMissed: ev.verdict === 'solid' ? [] : [label] };
 }
 
 /** A Socratic nudge for the garden: points at where to look, never states the rule. Two levels. */

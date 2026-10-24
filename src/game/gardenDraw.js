@@ -69,6 +69,15 @@ export function makeGardenTextures(scene) {
     canvasTexture(scene, `plant-${st}`, S, S, (c) => plant(c, st, false));
     canvasTexture(scene, `plant-${st}-dead`, S, S, (c) => plant(c, st, true));
   }
+  // "Needs water" icon (T22): a blue droplet on a pale bubble, floated over thirsty plots.
+  canvasTexture(scene, 'needs-water', 16, 20, (c) => {
+    R(c, '#1b2a3a', 4, 0, 8, 1); R(c, '#1b2a3a', 3, 1, 1, 12); R(c, '#1b2a3a', 12, 1, 1, 12); R(c, '#1b2a3a', 4, 13, 8, 1);
+    R(c, '#f4fbff', 4, 1, 8, 12);
+    R(c, '#1b2a3a', 7, 14, 2, 1); R(c, '#1b2a3a', 7, 15, 1, 1);
+    R(c, '#f4fbff', 7, 14, 2, 1);
+    R(c, '#2a7fd4', 7, 3, 2, 2); R(c, '#2a7fd4', 6, 5, 4, 2); R(c, '#2a7fd4', 5, 7, 6, 4); R(c, '#2a7fd4', 6, 11, 4, 1);
+    R(c, '#7cc4ff', 6, 7, 2, 3);
+  });
   // Soft round glow: concentric translucent discs (no gradients needed, stays pixel-ish).
   canvasTexture(scene, 'glow', 96, 96, (c) => {
     for (let r = 46; r > 2; r -= 4) {

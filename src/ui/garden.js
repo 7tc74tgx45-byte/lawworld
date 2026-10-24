@@ -6,7 +6,8 @@
 
 import { openOverlay, el, button } from './dom.js';
 import { retrievalTargets, plotStatus, plantSeed, waterPlot, dampRemainingMs, gardenOf, STAGE_NAMES, MAX_STAGE } from '../logic/garden.js';
-import { retrievalQuestion, evaluateRetrievalOffline, retrievalHint } from '../logic/retrieval.js';
+import { planRetrieval, kindLabel, evaluateRetrievalOffline, evaluateRetrievalItem, retrievalHint } from '../logic/retrieval.js';
+import { RETRIEVAL_BANK } from '../data/retrievalBank.js';
 import { findSubsection } from '../logic/curriculum.js';
 import { describeError } from '../logic/apiErrors.js';
 import { MIN_ANSWER_CHARS, MIN_QUESTION_CHARS } from '../logic/encounterRules.js';
@@ -53,10 +54,12 @@ export function openGarden({ plotId, getSave, curriculum, makeTutor, update, onD
       return;
     }
     if (plot.stage >= MAX_STAGE && status !== 'withered') body.append(el('p', 'lw-jhint', 'Fully grown. Water it again before it withers to keep the tree.'));
-    const question = retrievalQuestion(plot, sub);
-    body.append(el('p', null, question));
     const tutor = makeTutor?.() ?? null;
     const claude = !!(tutor && !tutor.offline && tutor.retrieve);
+    // The question kind rotates each round (rule, case, apply-to-facts). Offline, a banked building gets a concrete banked question.
+    const plan = planRetrieval(plot, sub, { bank: RETRIEVAL_BANK[plot.subsectionId], useBank: !claude });
+    const question = plan.question;
+    body.append(el('p', 'lw-jhint', `Retrieval round ${(plot.waterings ?? 0) + 1}: a ${kindLabel(plan.kind)}.`), el('p', null, question));
     if (!claude) body.append(el('p', 'lw-jhint', 'OFFLINE CHECK: no Claude key and Obsidian token, so answers are judged by simple keyword matching.'));
     const ctx = { subsection: sub, answers: [], followUpsUsed: 0, notSure: false, priorGaps: [], memory: [] };
     const log = el('div', 'lw-hint-note');
@@ -129,7 +132,7 @@ export function openGarden({ plotId, getSave, curriculum, makeTutor, update, onD
         let ev;
         if (claude) ev = await tutor.retrieve(ctx, { concept: plot.concept, question, answer: text });
         else {
-          ev = evaluateRetrievalOffline(text, plot, sub);
+          ev = plan.item ? evaluateRetrievalItem(text, plan.item, plot) : evaluateRetrievalOffline(text, plot, sub);
           if (ev.rejected) { log.textContent = ev.feedback; lock(false); return; }
           ev.feedback = `OFFLINE CHECK. ${ev.feedback}`;
         }

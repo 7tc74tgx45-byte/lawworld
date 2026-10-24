@@ -61,6 +61,7 @@ function normalisePlot(p, i) {
     stage: Math.min(5, count(p.stage)),
     plantedAt: str(p.plantedAt, null),
     lastWatered: str(p.lastWatered, null),
+    waterings: count(p.waterings), // retrieval rounds so far (T22): picks the next question kind; optional in old saves
   };
 }
 

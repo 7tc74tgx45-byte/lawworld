@@ -220,9 +220,9 @@ export default class GameScene extends Phaser.Scene {
   plotPrompt(v) {
     const seeds = this.saveStore.state.inventory.seeds;
     if (!v || v.empty) return `Knowledge garden: empty plot\nPress E to plant a seed (${seeds} in your bag)`;
-    if (v.status === 'withered') return `${v.concept}: withered\nPress E to answer a question and revive it`;
+    if (v.status === 'withered') return `${v.concept}: withered (needs water)\nPress E to answer a question and revive it`;
     if (v.damp) return `${v.concept}: ${v.stageName} (watered recently)\nPress E to check on it`;
-    return `${v.concept}: ${v.stageName}\nPress E to water it (answer a question)`;
+    return `${v.concept}: ${v.stageName}${v.thirsty ? ' (needs water)' : ''}\nPress E to water it (answer a question)`;
   }
 
   /** Region name banner when the player crosses into a region. */

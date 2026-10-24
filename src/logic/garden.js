@@ -52,6 +52,16 @@ export function plotStatus(plot, now) {
   return plot.stage >= MAX_STAGE ? 'grown' : 'growing';
 }
 
+/** A plant unwatered for this many in-game days shows the "needs water" icon (it can be watered once not damp). */
+export const THIRSTY_DAYS = 1;
+
+/** True when the plant is overdue for water: withered, or unwatered for THIRSTY_DAYS, and not still damp. Empty plots never are. */
+export function needsWater(plot, now) {
+  if (!plot) return false;
+  if (dampRemainingMs(plot, now) > 0) return false;
+  return plotStatus(plot, now) === 'withered' || daysSinceWatered(plot, now) >= THIRSTY_DAYS;
+}
+
 /** Real milliseconds until a damp plant can be watered again (0 when it is thirsty, or withered). */
 export function dampRemainingMs(plot, now) {
   if (plotStatus(plot, now) === 'withered') return 0;
@@ -125,9 +135,11 @@ export function waterPlot(save, plotId, verdict, now) {
   if (dampRemainingMs(plot, now) > 0) return { ok: false, reason: 'damp', save };
   const t = iso(now);
   const withered = plotStatus(plot, now) === 'withered';
-  let next = plot;
-  if (verdict === 'solid') next = { ...plot, lastWatered: t, stage: withered ? plot.stage : Math.min(MAX_STAGE, plot.stage + 1) };
-  else if (verdict === 'partial') next = { ...plot, lastWatered: t };
+  // Every attempt counts as a retrieval round (even a missed one) so the next question is of a different kind.
+  const rounds = (plot.waterings ?? 0) + 1;
+  let next = { ...plot, waterings: rounds };
+  if (verdict === 'solid') next = { ...plot, waterings: rounds, lastWatered: t, stage: withered ? plot.stage : Math.min(MAX_STAGE, plot.stage + 1) };
+  else if (verdict === 'partial') next = { ...plot, waterings: rounds, lastWatered: t };
   let progress = recordRetrieval(save.progress, { subsectionId: plot.subsectionId, concept: plot.concept, verdict, stage: null }, t);
   const sub = progress.subsections?.[plot.subsectionId];
   if (sub) progress = { ...progress, subsections: { ...progress.subsections, [plot.subsectionId]: { ...sub, lastReviewed: t } } };
@@ -160,6 +172,6 @@ export function gardenView(save, now) {
   return Array.from({ length: PLOT_COUNT }, (_, i) => {
     const plot = plots.find((p) => p.id === plotIdFor(i));
     if (!plot) return { id: plotIdFor(i), empty: true };
-    return { ...plot, empty: false, status: plotStatus(plot, now), stageName: STAGE_NAMES[plot.stage] ?? 'tree', days: daysSinceWatered(plot, now), damp: dampRemainingMs(plot, now) > 0 };
+    return { ...plot, empty: false, status: plotStatus(plot, now), stageName: STAGE_NAMES[plot.stage] ?? 'tree', days: daysSinceWatered(plot, now), damp: dampRemainingMs(plot, now) > 0, thirsty: needsWater(plot, now) };
   });
 }

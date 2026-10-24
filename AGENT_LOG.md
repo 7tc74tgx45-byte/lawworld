@@ -1072,3 +1072,31 @@ Cost $1.86 · 8 min · attempt 1
 - **Not covered by tests:** DOM wiring of the new buttons.
 
 **Next:** T22 (garden retrieval variety) is next. Playtest the costs. Consider letting materials buy something in the garden too, though VISION §4 only mentions hints and braziers.
+
+## T22 — done — 2026-10-24 05:26:27
+Cost $2.17 · 14 min · attempt 1
+
+**What changed:** Watering a plant now asks a rule, case or apply-to-facts question, and the five banked subsections have an offline retrieval bank. Thirsty plots show a droplet icon. `npm run build` passes and `npm test` passes (316 tests, 7 new in `tests/retrievalVariety.test.js`). I haven't seen it in a browser, so the Phaser icon and the overlay wiring are untested by eye.
+
+- **Question kinds.** Each watering round moves on to the next kind in the order rule, case, apply. The starting point depends on the concept, so two plants planted together don't both open with "rule". The round count is a new optional field, `waterings`, on each plot. Old saves default to 0, so no save version bump was needed. A missed answer still counts as a round, so the next question is a different kind. A case question is never asked for a building with no cases or statutes.
+- **Claude mode.** The same three templates are used as the question text, and the existing `retrieve()` judges the answer against your live note. Case and apply questions invent no authority. The apply template asks you to make up the facts, then advise in IRAC.
+- **Offline bank** (`src/data/retrievalBank.js` and `retrievalBankMore.js`). There are three questions per banked subsection: Intro to Contract, Objective Approach, Offer and Acceptance Framework, Assault, and the demo Offer & Acceptance building. They are my own questions and model answers, not copied from the vault.
+  - **Checking.** Offline answers are checked by concept overlap, with wrong-conclusion detection on the apply questions. A non-solid answer is shown the model answer afterwards, since a plant gets no second attempt.
+  - **Tests.** Tests check that each model answer scores solid, that waffle never does, and that a confidently wrong apply answer isn't solid.
+  - **Unbanked buildings.** They fall back to the generic templates with the old keyword check.
+- **Needs-water icon.** A bobbing droplet appears over a plot when it is withered, or unwatered for one in-game day and no longer damp. In real time that is 8 hours, a third of the 24 hours it takes to wither. The E-prompt text also says "(needs water)". The rule is `needsWater()` and `THIRSTY_DAYS` in `garden.js`.
+
+Files changed: `src/logic/retrieval.js`, `garden.js`, `save.js`, `src/ui/garden.js`, `src/game/Garden.js`, `gardenDraw.js`, `GameScene.js`, `TASKS.md`.
+
+**Try it:** 1. Run `npm run dev`. To get a plant quickly, edit an exported save to add seeds and a consolidated subsection, then re-import it.
+2. Plant a seed in a hub plot, press E on it, and answer. Do this on a banked building such as Objective Approach with no Claude key, so you get the banked questions.
+3. Water it again after about 10 minutes (the soil stays damp until then). The kind label above the question ("rule question", "case question" and so on) should change each round.
+4. To see the droplet, set `lastWatered` on a plot to more than 8 hours ago in an exported save and re-import it. A droplet bobs over that plot.
+
+**Design notes:** - **Offline banked answers are still keyword-matched.** They are fairer than before (specific concepts, wrong-conclusion checks), but still crude, and the UI labels them OFFLINE CHECK.
+- **Case questions don't pin down one case.** In Claude mode the question says "name the case that goes with it" and leaves the choice to the player. I didn't name a case in the prompt, so the question can't give the answer away.
+- **Unbanked subsections** (most of the curriculum) get the generic templates offline, judged by the old keyword check. Adding more retrieval items is just new entries in `RETRIEVAL_BANK`.
+- **Banked item choice.** An item is matched by a regex on the planted concept's wording, with the kind-matching item as the fallback. Concepts that match nothing still get a sensible question for that building.
+- **Thirsty threshold.** One in-game day is a judgement call and easy to tune.
+
+**Next:** Playtest the offline retrieval questions for fairness. The concept-overlap patterns may be too strict or too lenient on real answers. Then extend `RETRIEVAL_BANK` beyond the five banked subsections as more encounter banks are written.

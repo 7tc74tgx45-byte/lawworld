@@ -168,5 +168,5 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
 - [x] **T21 — Spend materials (VISION §4)**
   - Materials buy an extra hint (beyond MAX_HINTS, still a nudge) or light a brazier early. Pure rules in `src/logic/`, UI in the journal or door panel, tests.
 
-- [ ] **T22 — Garden retrieval variety**
+- [x] **T22 — Garden retrieval variety**
   - Several question templates per concept (rule, case, apply-to-facts), and a small offline retrieval bank for the five banked subsections. Add a "needs water" icon over thirsty plots.
