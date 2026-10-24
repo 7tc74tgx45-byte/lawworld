@@ -177,8 +177,21 @@ export function formatSessionNote({ date, subsection, module, district, tutor, r
     '## Next time',
     ...nextTimeLines(result, gaps),
     '',
+    ...transcriptSection(result),
   ];
   return [...fm, ...body].join('\n');
+}
+
+function transcriptSection(result) {
+  const transcript = result.transcript ?? [];
+  if (!transcript.length) return [];
+  const lines = ['## Transcript', ''];
+  for (const msg of transcript) {
+    const role = msg.role === 'tutor' ? `**${result.tutor ?? 'Tutor'}**` : '**You**';
+    const text = String(msg.text ?? msg.content ?? '').replace(/\n/g, '  \n');
+    if (text) lines.push(`${role}: ${text}`, '');
+  }
+  return lines;
 }
 
 // ---------------------------------------------------------------------------

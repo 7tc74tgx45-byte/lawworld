@@ -14,7 +14,8 @@ import { openOverlay, el, button } from './dom.js';
 import { getPortrait } from './portraits.js';
 import { sfx } from '../audio/sfx.js';
 import { evaluationSound } from '../logic/sfx.js';
-import { searchNotes } from '../api/obsidian.js';
+import { searchNotes, readNote } from '../api/obsidian.js';
+import { clipText } from '../logic/notes.js';
 
 let active = null;
 
@@ -260,8 +261,18 @@ export function openEncounter({ subsection, tutor, priorGaps, loadMemory, onOpen
       if (!results?.length) {
         addMsg({ role: 'tutor', text: `No vault notes match "${q}".` });
       } else {
-        const hits = results.slice(0, 6).map(r => r.filename).join('\n');
-        addMsg({ role: 'tutor', text: `Vault search for "${q}":\n${hits}` });
+        const top = results.slice(0, 6);
+        const lines = await Promise.all(top.map(async (r) => {
+          const filename = r.filename ?? r.path ?? '';
+          try {
+            const raw = await readNote(filename);
+            const snippet = clipText(raw, 200).replace(/\n+/g, ' ').trim();
+            return `**${filename}**\n${snippet}`;
+          } catch {
+            return `**${filename}**`;
+          }
+        }));
+        addMsg({ role: 'tutor', text: `Vault search for "${q}":\n\n${lines.join('\n\n')}` });
       }
     } catch (err) {
       addMsg({ role: 'tutor', text: `Search failed: ${err.message}` });
