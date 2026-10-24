@@ -18,7 +18,7 @@ const TICK_MS = 400;
 
 export class MusicManager {
   /** createContext is injectable so the manager can be tested without a browser. */
-  constructor({ createContext, setTimer = setInterval, clearTimer = clearInterval, gestureTarget } = {}) {
+  constructor({ createContext, setTimer = (fn, ms) => window.setInterval(fn, ms), clearTimer = (id) => window.clearInterval(id), gestureTarget } = {}) {
     this.createContext = createContext ?? (() => {
       const C = globalThis.AudioContext || globalThis.webkitAudioContext;
       return C ? new C() : null;
