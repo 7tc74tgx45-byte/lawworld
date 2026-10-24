@@ -269,3 +269,114 @@ export function drawLectureHall(ctx, state, side, season) {
 }
 
 export const lectureHallKey = (state, side, season) => `lh-${state}-${side}-${season}`;
+
+// ─── Case Library — red brick building with book chimney ──────────────────────
+
+export const LIB_PX_W = BLD_PX_W;
+export const LIB_PX_H = BLD_PX_H;
+
+const BRICK_RED    = '#8b2a2a';
+const BRICK_DARK   = '#6b1818';
+const BRICK_LIGHT  = '#b04040';
+const MORTAR_LIB   = '#3c2020';
+const BOOK_COLS = ['#c0392b', '#e67e22', '#2980b9', '#27ae60', '#8e44ad', '#f1c40f'];
+
+function brickWall(ctx, x, y, w, h) {
+  R(ctx, BRICK_RED, x, y, w, h);
+  for (let row = 0; row < Math.ceil(h / 7); row++) {
+    const ry = y + row * 7;
+    R(ctx, MORTAR_LIB, x, ry, w, 1);
+    const offset = (row % 2) * 8;
+    for (let col = offset; col < w; col += 16) R(ctx, MORTAR_LIB, x + col, ry, 1, 7);
+  }
+  R(ctx, BRICK_LIGHT, x, y, 1, h);
+}
+
+function bookChimney(ctx, x, y) {
+  const books = [
+    { c: BOOK_COLS[0], w: 10, h: 5 },
+    { c: BOOK_COLS[1], w: 8,  h: 4 },
+    { c: BOOK_COLS[2], w: 11, h: 5 },
+    { c: BOOK_COLS[3], w: 9,  h: 4 },
+    { c: BOOK_COLS[4], w: 10, h: 5 },
+    { c: BOOK_COLS[5], w: 7,  h: 4 },
+    { c: BOOK_COLS[0], w: 9,  h: 4 },
+  ];
+  let cy = y;
+  for (const { c, w, h } of books) {
+    const bx = x + Math.floor((12 - w) / 2);
+    R(ctx, '#1a1010', bx - 1, cy, w + 2, h);
+    R(ctx, c,         bx,     cy, w,     h);
+    R(ctx, 'rgba(255,255,255,0.18)', bx, cy, w, 1);
+    R(ctx, '#1a1010', bx - 1, cy, 1, h);
+    cy += h;
+  }
+}
+
+function libraryWindow(ctx, x, y, glow) {
+  const ww = 16, wh = 14;
+  R(ctx, '#5a3a3a', x - 2, y - 2, ww + 4, wh + 4);
+  R(ctx, glow ? '#ffe9a8' : '#8aafcc', x, y, ww, wh);
+  R(ctx, 'rgba(255,255,255,0.35)', x, y, ww, 2);
+  R(ctx, '#3a2020', x + 7, y, 2, wh);
+  R(ctx, '#3a2020', x, y + 6, ww, 2);
+  R(ctx, '#7a5a5a', x - 3, y + wh + 2, ww + 6, 3);
+}
+
+function libraryDoor(ctx, st, x, y) {
+  const dw = S - 10, dh = 26;
+  R(ctx, BRICK_DARK, x - 3, y - 5, dw + 6, dh + 5);
+  R(ctx, st.door, x, y, dw, dh - 4);
+  R(ctx, st.door, x + 2, y - 3, dw - 4, 5);
+  R(ctx, st.door, x + 1, y - 2, dw - 2, 4);
+  R(ctx, 'rgba(0,0,0,0.22)', x + 5, y, 1, dh - 4);
+  R(ctx, 'rgba(0,0,0,0.22)', x + dw - 6, y, 1, dh - 4);
+  R(ctx, '#f2c94c', x + dw - 6, y + 12, 3, 3);
+  R(ctx, '#8d8d96', x - 4, y + dh - 4, dw + 8, 5);
+  R(ctx, DARK, x - 4, y + dh, dw + 8, 1);
+}
+
+export function drawLibrary(ctx, state, side, season) {
+  const st = STATE_STYLE[state];
+  const outerTop = side === 'top';
+  const wallH = LIB_PX_H - ROOF_H;
+  const roofY = outerTop ? 0 : LIB_PX_H - ROOF_H;
+  const wallY = outerTop ? ROOF_H : 0;
+  const glow  = state !== 'locked';
+
+  brickWall(ctx, 2, wallY, LIB_PX_W - 4, wallH);
+
+  R(ctx, BRICK_DARK,  2,              wallY, 5, wallH);
+  R(ctx, BRICK_DARK,  LIB_PX_W - 7,  wallY, 5, wallH);
+  R(ctx, BRICK_LIGHT, 2,              wallY, 1, wallH);
+  R(ctx, BRICK_LIGHT, LIB_PX_W - 7,  wallY, 1, wallH);
+
+  const corniceY = outerTop ? roofY : roofY + ROOF_H - 8;
+  R(ctx, '#7a3030', 0, corniceY, LIB_PX_W, 8);
+  R(ctx, BRICK_DARK,  0, corniceY, LIB_PX_W, 1);
+  R(ctx, BRICK_LIGHT, 0, corniceY + 1, LIB_PX_W, 1);
+  R(ctx, BRICK_RED, 0, roofY, LIB_PX_W, outerTop ? Math.max(0, corniceY - roofY) : ROOF_H - 8);
+
+  // Book chimney: a colourful stack of books poking up from the outer parapet
+  const chimneyX = LIB_PX_W - 20;
+  const stackH = 36;
+  const chimneyBaseY = outerTop ? roofY : roofY + ROOF_H - 8;
+  R(ctx, BRICK_DARK, chimneyX - 1, outerTop ? chimneyBaseY - 3 : chimneyBaseY, 14, 4);
+  bookChimney(ctx, chimneyX, outerTop ? chimneyBaseY - 3 - stackH : chimneyBaseY - stackH);
+
+  const wy = outerTop ? wallY + 8 : wallY + 14;
+  libraryWindow(ctx, 10, wy, glow);
+  libraryWindow(ctx, LIB_PX_W - 28, wy, glow);
+
+  libraryDoor(ctx, st, S + 4, outerTop ? LIB_PX_H - 28 : wallY);
+
+  mark(ctx, st.mark, LIB_PX_W - 22, roofY + (outerTop ? 1 : ROOF_H - 22));
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, LIB_PX_W - 2, LIB_PX_H - 2);
+
+  void season;
+}
+
+export const libraryKey = (state, side, season) => `lib-${state}-${side}-${season}`;
