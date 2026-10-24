@@ -39,6 +39,12 @@ export function gapLine(priorGaps, memory = []) {
   return ` Last time ${concepts.join(' and ')} didn't fully land, so we will meet ${concepts.length > 1 ? 'them' : 'it'} again today.`;
 }
 
+/** Turn a bank stage-5 prompt into a client's file: drop the "Stage 5" label, keep the facts and the IRAC ask. */
+export function clientFileText(stage5Prompt, clientName = 'The client') {
+  const body = String(stage5Prompt ?? '').replace(/^Stage 5,?\s*application\.?\s*/i, '').replace(/^Client scenario:\s*/i, '').trim();
+  return `${clientName} has come to the office with a problem. The file reads: ${body}`;
+}
+
 const NOTE_QA = [
   { rx: ['postal'], text: 'The postal rule (Adams v Lindsell) says acceptance by post is complete on posting, if post is a reasonable method. It is an exception to the general receipt rule, and it does not cover revocation (Byrne v Van Tienhoven) or instant communications (Entores).' },
   { rx: ['invitation', 'itt'], text: 'An invitation to treat invites others to make offers and does not bind the person inviting. Standard examples are shop displays (Fisher v Bell, Pharmaceutical Society v Boots), and a price given in reply to a request for information (Harvey v Facey). Adverts can still be offers if worded as a firm promise (Carlill).' },
@@ -65,6 +71,12 @@ export function createOfflineTutor(opts = {}) {
         return { text: `Question ${ctx.mcqIndex + 1} of ${bank[6].questions.length}: ${q.text}`, options: q.options };
       }
       return { text: bank[stage].prompt + (stage === 1 ? gapLine(ctx.priorGaps, ctx.memory) : ''), modelAnswer: bank[stage].modelAnswer }; // modelAnswer stays inside the engine (hint leak check)
+    },
+
+    /** Client NPC case (T12): the bank's stage-5 client scenario, framed as the client's file. */
+    clientScenario(ctx) {
+      const bank = bankFor(ctx.subsection);
+      return { text: clientFileText(bank[5].prompt, ctx.clientName), modelAnswer: bank[5].modelAnswer };
     },
 
     evaluate(stage, prompt, answer, ctx) {

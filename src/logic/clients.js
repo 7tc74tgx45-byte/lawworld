@@ -23,6 +23,20 @@ const NAMES = [
 export const slotIdFor = (regionId) => `client-${regionId}`;
 export const materialKeyFor = (regionId) => MATERIAL_BY_REGION[regionId] ?? null;
 
+/** Which tutor serves a region's clients by default (VISION §3: Okafor frames things as a client file). */
+export const CLIENT_TUTOR_BY_REGION = { contract: 'okafor', tort: 'okafor', 'public-law': 'hale', foundations: 'chen' };
+export const clientTutorFor = (regionId) => CLIENT_TUTOR_BY_REGION[regionId] ?? 'okafor';
+
+/**
+ * Should a client be standing in this region right now? Needs a served-able explored/consolidated subsection and
+ * no cooldown. Returns the candidates too so the caller can pick one. Pure.
+ */
+export function clientPresence(curriculum, progress, clients, regionId, { canServe, recent, now = Date.now() } = {}) {
+  const candidates = clientCandidates(curriculum, progress, regionId, { canServe, recent: recent ?? clients?.recent ?? [] });
+  const present = candidates.length > 0 && !onCooldown(clients, slotIdFor(regionId), now);
+  return { present, candidates };
+}
+
 /** Deterministic client name: the Nth client of a region always has the same name. */
 export function clientName(regionId, visit = 0) {
   let h = 7;

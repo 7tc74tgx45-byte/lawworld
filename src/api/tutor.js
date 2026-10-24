@@ -12,7 +12,7 @@ import { formatSessionMemory } from '../logic/sessionNote.js';
 import { parseWithRepair, REPAIR_PROMPT, cleanPrompt, cleanEvaluation, cleanText } from '../logic/tutorJson.js';
 import {
   contextBlock, introPrompt, questionPrompt, mcqPrompt, evaluatePrompt, hintPrompt, mcqHintPrompt,
-  notSurePrompt, answerPrompt, webAnswerPrompt,
+  notSurePrompt, answerPrompt, webAnswerPrompt, clientScenarioPrompt, clientEvaluatePrompt,
 } from '../logic/tutorPrompts.js';
 
 export const WEB_SEARCH_TOOL = { type: 'web_search_20250305', name: 'web_search', max_uses: 3 };
@@ -101,7 +101,8 @@ export function createClaudeTutor(opts = {}) {
   }
 
   const questionOf = (prompt) => prompt?.text ?? '';
-  const secretFor = (entry, stage) => entry.secrets.get(stage) ?? '';
+  // Client cases (T12) keep their own private model answer, apart from the stage-5 one.
+  const secretFor = (entry, stage, ctx) => entry.secrets.get(ctx?.mode === 'client' ? 'client' : stage) ?? '';
 
   return {
     id: persona.id,
@@ -142,14 +143,33 @@ export function createClaudeTutor(opts = {}) {
         };
       }
       const answers = ctx.answers?.length ? ctx.answers : [String(answer)];
+      if (ctx.mode === 'client') {
+        // The client's own words stay the question, even during the follow-up.
+        return askJson(
+          clientEvaluatePrompt(block, {
+            question: entry.clientText || questionOf(prompt), modelAnswer: secretFor(entry, stage, ctx),
+            answers, followUpsUsed: ctx.followUpsUsed, notSure: ctx.notSure,
+          }),
+          cleanEvaluation,
+        );
+      }
       const ev = await askJson(
         evaluatePrompt(block, {
-          stage, question: questionOf(prompt), modelAnswer: secretFor(entry, stage),
+          stage, question: questionOf(prompt), modelAnswer: secretFor(entry, stage, ctx),
           answers, followUpsUsed: ctx.followUpsUsed, notSure: ctx.notSure,
         }),
         cleanEvaluation,
       );
       return ev;
+    },
+
+    /** A client's problem for this subsection (T12), built from the live note section and open gaps. */
+    async clientScenario(ctx) {
+      const { entry, block } = await load(ctx);
+      const o = await askJson(clientScenarioPrompt(block, { clientName: ctx.clientName }), (x) => cleanPrompt(x));
+      entry.secrets.set('client', o.modelAnswer ?? '');
+      entry.clientText = o.text;
+      return { text: o.text, modelAnswer: o.modelAnswer ?? '' };
     },
 
     async hint(stage, prompt, index, ctx) {
@@ -160,7 +180,7 @@ export function createClaudeTutor(opts = {}) {
         return o.text;
       }
       const o = await askJson(
-        hintPrompt(block, { stage, question: questionOf(prompt), modelAnswer: secretFor(entry, stage), answers: ctx.answers ?? [], index }),
+        hintPrompt(block, { stage, question: questionOf(prompt), modelAnswer: secretFor(entry, stage, ctx), answers: ctx.answers ?? [], index }),
         (x) => cleanText(x),
       );
       return o.text; // the engine's leak check replaces a hint that copies the model answer
@@ -173,7 +193,7 @@ export function createClaudeTutor(opts = {}) {
         return { explanation: q?.explanation ?? '', concepts: [q?.concept || ctx.subsection.title] };
       }
       const o = await askJson(
-        notSurePrompt(block, { stage, question: questionOf(prompt), modelAnswer: secretFor(entry, stage) }),
+        notSurePrompt(block, { stage, question: questionOf(prompt), modelAnswer: secretFor(entry, stage, ctx) }),
         (x) => (typeof x.explanation === 'string' && x.explanation.trim() ? x : null),
       );
       const concepts = Array.isArray(o.concepts) ? o.concepts.map(String).filter(Boolean).slice(0, 6) : [];

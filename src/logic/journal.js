@@ -5,6 +5,7 @@ import { allDistricts, subsectionIndex, locateSubsection } from './curriculum.js
 import { computeRollups, openGaps, statLevel, STAT_KEYS, STAT_LABELS } from './progress.js';
 import { STAGES } from './encounterRules.js';
 import { recentSessions } from './sessionLog.js';
+import { MATERIAL_LABEL } from './clients.js';
 
 const stageLabel = (n) => STAGES.find((s) => s.n === n)?.label ?? null;
 
@@ -67,11 +68,19 @@ export function moduleTree(curriculum, progress) {
   });
 }
 
+/** Materials earned from clients (T12), in a fixed order with their labels. */
+export function materialList(save) {
+  const mats = save.inventory?.materials ?? {};
+  return ['precedentScrolls', 'caseReports', 'statuteRolls', 'ink'].map((key) => ({ key, label: MATERIAL_LABEL[key], count: mats[key] ?? 0 }));
+}
+
 /** Everything the journal shows. */
 export function buildJournal(curriculum, save) {
   const progress = save.progress;
   return {
     stats: statBars(progress),
+    materials: materialList(save),
+    clientsServed: save.clients?.served ?? 0,
     tree: moduleTree(curriculum, progress),
     revisit: revisitList(curriculum, progress),
     sessions: recentSessions(save.sessions ?? []),

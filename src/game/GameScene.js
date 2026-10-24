@@ -22,6 +22,8 @@ import { createCat, updateCat, catFrame, pickBesideSpot } from '../logic/cat.js'
 import { STATE_LABEL } from './palette.js';
 import WorldRenderer from './WorldRenderer.js';
 import Weather from './Weather.js';
+import ClientNpcs from './ClientNpcs.js';
+import { startClientCase, canServeClient } from './clientFlow.js';
 
 const PLAYER_SPEED = 150;
 
@@ -107,6 +109,10 @@ export default class GameScene extends Phaser.Scene {
       .setScrollFactor(0).setDepth(100000);
 
     this.refreshStates();
+    // Client NPCs (T12): one per region while something there is explored. A served client leaves for 5 minutes.
+    this.clientNpcs = new ClientNpcs(this, world, { canServe: canServeClient });
+    this.refreshClients();
+    this.time.addEvent({ delay: 15000, loop: true, callback: () => this.refreshClients() }); // cooldowns end, settings change
     this.currentRegionId = null;
     this.updateRegion(true);
     this.updateWeather(true);
@@ -145,6 +151,11 @@ export default class GameScene extends Phaser.Scene {
     this.states = computeStates(curriculum, progress);
     const lit = new Set(this.districtList.filter((d) => isBrazierLit(d, this.states)).map((d) => d.id));
     this.renderer.applyStates(this.states, lit);
+  }
+
+  /** Reconcile client sprites with the save (new explored subsections, cooldowns). */
+  refreshClients() {
+    this.clientNpcs?.refresh(this.saveStore.state);
   }
 
   /** Region name banner when the player crosses into a region. */
@@ -228,6 +239,7 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
     this.refreshStates();
+    this.refreshClients();
     const gaps = res.gaps.length;
     const base = `${sub.title}: ${res.outcome.toUpperCase()}${gaps ? ` (${gaps} gap${gaps > 1 ? 's' : ''} logged)` : ''}`;
     this.showBanner(base);
@@ -302,7 +314,9 @@ export default class GameScene extends Phaser.Scene {
   update(time, delta) {
     this.renderer.update(this.cameras.main, time);
     this.weather.update(delta);
-    if (this.encounterOpen || isAnyOverlayOpen()) {
+    const overlayUp = this.encounterOpen || isAnyOverlayOpen();
+    this.clientNpcs.update(delta / 1000, this.player, { frozen: overlayUp });
+    if (overlayUp) {
       this.prompt.setVisible(false);
       this.animateCharacters(delta, false);
       return;
@@ -348,6 +362,14 @@ export default class GameScene extends Phaser.Scene {
     this.updateRegion();
     this.updateWeather();
 
+    // A client close by takes priority over a door: E starts their case.
+    const near = this.clientNpcs.nearest(this.player.x, this.player.y);
+    if (near) {
+      const n = near.npc;
+      this.prompt.setText(`${n.name} has a problem${n.hasGap ? ' (something you missed before)' : ''}\nPress E to hear it · ${n.subsection.title}`).setVisible(true);
+      if (Phaser.Input.Keyboard.JustDown(this.eKey)) startClientCase(this, n);
+      return;
+    }
     const door = doorNear(this.world, this.player.x, this.player.y, this.facing);
     if (door) {
       const state = this.states[door.id] ?? 'locked';

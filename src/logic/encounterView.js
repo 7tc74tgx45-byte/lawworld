@@ -32,8 +32,8 @@ export function viewState({ kind = 'info', mode = 'answer', finished = false } =
 }
 
 /** CSS classes and label for one transcript message from the engine. */
-export function messageView(m, tutorName = 'Tutor') {
-  const cls = ['lw-msg', m.role === 'tutor' ? 'tutor' : m.role === 'player' ? 'player' : 'system'];
+export function messageView(m, tutorName = 'Tutor', clientName = 'Client') {
+  const cls = ['lw-msg', m.role === 'tutor' ? 'tutor' : m.role === 'player' ? 'player' : m.role === 'client' ? 'client' : 'system'];
   if (m.kind === 'hint') cls.push('hint');
   if (m.kind === 'answer') cls.push('answer');
   if (m.external) cls.push('external');
@@ -41,7 +41,8 @@ export function messageView(m, tutorName = 'Tutor') {
   if (m.correct === true) cls.push('correct');
   if (m.correct === false) cls.push('wrong');
   let label = '';
-  if (m.role === 'tutor') {
+  if (m.role === 'client') label = m.kind === 'reaction' ? `${clientName} reacts` : clientName;
+  else if (m.role === 'tutor') {
     label = m.kind === 'hint' ? 'Hint'
       : m.kind === 'answer' ? (m.external ? 'External, not from your notes' : 'Answer to your question')
       : m.kind === 'verdict' ? `${tutorName}: verdict`

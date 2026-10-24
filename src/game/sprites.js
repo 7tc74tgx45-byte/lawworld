@@ -2,6 +2,7 @@
 // weather particles. No image files.
 import { drawBuilding, buildingKey, BLD_PX_W, BLD_PX_H } from './buildingDraw.js';
 import { drawPlayer, drawCatWalk, drawCatSit } from './characterDraw.js';
+import { drawClient } from './clientDraw.js';
 import { TILE_SIZE } from '../logic/worldQuery.js';
 import { FACINGS } from '../logic/anim.js';
 
@@ -70,6 +71,9 @@ export function makeFurnitureTextures(scene) {
 export function makeCharacterTextures(scene) {
   for (const dir of FACINGS) {
     for (const frame of [0, 1, 2]) canvasTexture(scene, `player-${dir}-${frame}`, 20, 26, (ctx) => drawPlayer(ctx, dir, frame));
+  }
+  for (const v of [0, 1, 2, 3]) {
+    for (const frame of [0, 1, 2]) canvasTexture(scene, `client-${v}-${frame}`, 20, 26, (ctx) => drawClient(ctx, v, frame));
   }
   for (const f of [0, 1]) canvasTexture(scene, `cat-walk-${f}`, 18, 14, (ctx) => drawCatWalk(ctx, f));
   for (const f of [0, 1, 2]) canvasTexture(scene, `cat-sit-${f}`, 18, 14, (ctx) => drawCatSit(ctx, f));

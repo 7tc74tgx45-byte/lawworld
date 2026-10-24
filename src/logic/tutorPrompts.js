@@ -42,6 +42,17 @@ export function questionPrompt(block, stage, { avoid = [] } = {}) {
   }\nAlso write "modelAnswer": a compact model answer (3 to 6 sentences) drawn from the note; the student never sees it.\n${JSON_ONLY} Schema: {"text": string, "modelAnswer": string}`;
 }
 
+/** A client NPC brings a problem (T12). Voice of a layperson; real law from the note; biased toward open gaps. */
+export function clientScenarioPrompt(block, { clientName = 'The client', avoid = [] } = {}) {
+  return `${block}\n\nTASK: ${clientName} is a client who has walked in with a problem. Write what the client says, in a layperson's own voice (first person, plain words, under 120 words, invented facts but real England & Wales law from the NOTE SECTION). The problem must need the rule from this section; do not name the cases or statutes the answer depends on. If OPEN GAPS exist and are relevant, build the problem so that one of them decides it. End with the client asking what they should do.${
+    avoid.length ? `\nDo not reuse these earlier problems: ${avoid.join(' | ')}` : ''
+  }\nAlso write "modelAnswer": a compact IRAC answer (Issue, Rule, Application, Conclusion; 4 to 7 sentences) drawn from the note; the student never sees it.\n${JSON_ONLY} Schema: {"text": string, "modelAnswer": string}`;
+}
+
+export function clientEvaluatePrompt(block, { question, modelAnswer, answers, followUpsUsed = 0, notSure = false }) {
+  return `${block}\n\nCLIENT CASE. The student is advising a client. THE CLIENT SAID: ${question}\nMODEL ANSWER (private, do not quote at length): ${modelAnswer || '(none; judge from the note)'}\nSTUDENT'S ADVICE SO FAR (latest last):\n${answers.map((a, i) => `${i + 1}. ${a}`).join('\n')}\n${notSure ? 'The student said "I\'m not sure" earlier and was taught the idea, so this is a restatement.\n' : ''}Follow-ups already used: ${followUpsUsed} of 1.\n\nTASK: Evaluate the LATEST advice against the note, as a tutor marking IRAC advice. verdict: "solid" only when the issue is identified, the right rule is stated, it is applied to THESE facts, and the conclusion is sound and clearly put to the client; "partial" (right direction but thin, imprecise or unstructured); "missing" (wrong or empty of the key ideas). "feedback": what the advice got right, what was missing or wrong, and the legal precision (2 to 5 sentences, addressed to the student). "conceptsHit" and "conceptsMissed": short labels, preferably from KEY CONCEPTS. "iracScore": 0 to 4 (one point each for a clear Issue, Rule, Application, Conclusion). If the verdict is not "solid", add "followUp": ONE question that nudges toward what is missing without giving it away.\n${JSON_ONLY} Schema: {"verdict": "solid"|"partial"|"missing", "feedback": string, "conceptsHit": string[], "conceptsMissed": string[], "followUp"?: string, "iracScore": number}`;
+}
+
 export function mcqPrompt(block) {
   return `${block}\n\nTASK: Write 3 multiple-choice questions checking understanding of this subsection. Each has exactly 3 options and one correct option (0-based index). Wrong options must be plausible. Vary the correct index. Base them on the NOTE SECTION only. "explanation": 1 to 2 sentences that explain why the right answer is right. "concept": a short label for what it tests.\n${JSON_ONLY} Schema: {"questions": [{"text": string, "options": [string, string, string], "correct": 0|1|2, "explanation": string, "concept": string}]}`;
 }

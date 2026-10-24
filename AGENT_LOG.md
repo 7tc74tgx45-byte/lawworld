@@ -712,3 +712,35 @@ Cost $2.36 · 19 min · attempt 1
 3. In `GameScene`, call `applyClientResult` through `saveStore.update(...)`, show `describeReward`, and show the client's reaction via `clientReaction`.
 4. Add the player's materials to the journal. They are in `save.inventory.materials` but not yet displayed.
 5. Tick T12 in TASKS.md once clients can be played in the browser.
+
+## T12 — done — 2026-10-24 03:45:34
+Cost $1.76 · 7 min · attempt 2
+
+**What changed:** Client NPCs can now be played in the world. Each region gets one wandering client once you have explored or consolidated something there. Press E near them and they tell you their problem. You type IRAC advice, and the tutor evaluates it. You get at most one follow-up, then a verdict, a reaction from the client, and a reward. `npm test` passes (219 tests, 10 of them new) and `npm run build` passes. I have not played it in a browser, so the sprites, the E prompt and the overlay layout are unchecked by eye.
+
+**What was added**
+- **Spawning:** `ClientNpcs.js` spawns one client per region on a walkable tile, and `clientWander.js` handles the wandering. A client stands still while you are close or an overlay is open. The `GameScene` E prompt gives a client priority over a door.
+- **Looks:** four client sprite variants, drawn in `clientDraw.js`. Each client has a name label.
+- **Client overlay:** `ui/clientEncounter.js`, which shows no stage pips. It has Give advice, Hint, "I'm not sure", Ask the tutor a question (works at any point and does not count as advice) and Leave. There is no skip. At the verdict it shows the client's reaction and a reward line (for example "+2 Case Reports, +3 Application").
+- **Offline tutor:** `clientScenario` turns each bank's stage-5 client scenario into "<Name> has come to the office…". The model answer is private. All four banked subsections work offline, and a test checks that each bank's model answer earns a solid verdict and a reward.
+- **Claude tutor:** `clientScenario` and a client mode of `evaluate` use new prompts (`clientScenarioPrompt`, `clientEvaluatePrompt`). The scenario is a layperson's first-person problem under 120 words, built from the live note section and open gaps. The evaluation is IRAC-scored. The client's own words stay as the question during the follow-up, and a hint that copies the model answer is replaced.
+- **Save and journal:** results go through `applyClientResult` into the save, which is written straight away. The journal gets a Materials section and a count of clients served.
+- **Leaving early:** leaving mid-case keeps what was earned so far. Nothing answered means nothing earned and the client stays.
+- **Tutor choice:** the client's tutor is the one you last used on that building, otherwise a regional default (Okafor for Contract and Tort, Hale for Public Law, Chen for Foundations).
+
+**Tidy-ups:** the client engine gained `ask`, `started` and `switchTutor`, and `clientPresence` and `clientTutorFor` were added to `clients.js`.
+
+**Try it:** Run `npm run dev`. Study any building in Contract or Tort that has an offline bank (What is a contract, Objective approach, Offer and acceptance, Assault); leaving partway also counts as explored. Then walk around that region's districts. A named client appears, and a prompt says "has a problem". Press E, read their problem, and type advice in Issue / Rule / Application / Conclusion order. Press Tab afterwards to see the materials and stats. The client leaves for 5 minutes. To see the offline label, leave the Claude key and Obsidian token empty.
+
+**Design notes:** - **Regions without a bank:** only 4 subsections have an offline bank. Without Claude and Obsidian, Public Law and Foundations never get clients, and that is deliberate. `canServeClient` hides a client rather than showing one that cannot be served.
+- **Scenario wording:** offline scenarios are the bank's stage-5 scenarios, so a client repeats the problem you saw in that building's stage 5. Claude clients write fresh problems. Writing a dedicated offline client bank is the better long-term fix.
+- **Offline client evaluator:** it is keyword-based, as in the main game. It cannot judge the quality of reasoning.
+- **Switching tutor:** "Continue offline" is only offered before the client has spoken, because a Claude-written scenario cannot be judged by the offline bank.
+- **Cooldown:** the 5-minute cooldown uses the real clock, which is not the same as in-game time.
+- **Not done in this session:** nothing was verified visually, and the vault was not read.
+
+**Next:** 1. Play it in a browser and check the sprite scale, label position, and overlay layout.
+2. Write a dedicated offline client bank with fresh scenarios so clients differ from stage 5.
+3. Extend offline banks to Public Law and Foundations so those regions get clients offline.
+4. Use the materials: buy extra hints or light braziers (T13).
+5. Optionally write client cases into a TUTOR-SESSION note.

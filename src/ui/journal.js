@@ -37,6 +37,18 @@ function statsSection(stats) {
   return s;
 }
 
+function materialsSection(materials, served) {
+  const s = section('Materials', `Earned by advising clients (${served} served). Each region pays in its own material.`);
+  const row = el('div', 'lw-mats');
+  for (const m of materials) {
+    const chip = el('span', 'lw-mat' + (m.count ? '' : ' none'));
+    chip.append(el('b', null, String(m.count)), document.createTextNode(` ${m.label}`));
+    row.append(chip);
+  }
+  s.append(row);
+  return s;
+}
+
 function revisitSection(revisit) {
   const s = section('Things to revisit', 'Concepts you missed or only half had. Click one to see where it lives.');
   if (!revisit.length) {
@@ -135,7 +147,7 @@ export function openJournal({ curriculum, save, onClosed } = {}) {
   const head = el('div', 'lw-jhead');
   head.append(el('h2', 'lw-h', 'Journal'), button('Close (Tab)', 'primary', close));
   const body = el('div', 'lw-jbody');
-  body.append(statsSection(j.stats), revisitSection(j.revisit), treeSection(j.tree), sessionsSection(j.sessions));
+  body.append(statsSection(j.stats), materialsSection(j.materials, j.clientsServed), revisitSection(j.revisit), treeSection(j.tree), sessionsSection(j.sessions));
   panel.append(head, body);
   overlay.focus();
   return { close };

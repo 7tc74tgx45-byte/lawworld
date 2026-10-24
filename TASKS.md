@@ -102,7 +102,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
 - [x] **T11 — Journal and stats screen (Tab)**
   - Stats bars; per-module tree of districts/subsections with states; "Things to revisit" gap list (click to see the concept and which building it's in); last 10 sessions.
 
-- [ ] **T12 — Client NPCs**
+- [x] **T12 — Client NPCs**
   - Wandering client NPCs per region. Each brings a short problem built (by Claude, or the offline bank) from subsections the player has explored or consolidated, biased toward open gaps. Player types advice; the tutor evaluates using IRAC; client reacts; reward = region material and stat gains. Uses the encounter engine in a `client` mode (scenario → evaluation → one follow-up → verdict).
 
 - [ ] **T13 — Knowledge garden and braziers**

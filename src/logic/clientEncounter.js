@@ -91,6 +91,16 @@ export function createClientEncounter({ subsection, tutor, clientName = 'The cli
     return out([say('tutor', `Hint: ${t}`, { kind: 'hint' })]);
   }
 
+  // The player may ask the tutor a question at any point (VISION §1.5). It never touches the evaluation.
+  async function ask(question) {
+    const q = String(question ?? '').trim();
+    if (q.length < 5) return reject('Type your question first (a few words at least).');
+    const msgs = [say('player', q, { kind: 'question' })];
+    const a = tutor.answerQuestion ? await tutor.answerQuestion(q, ctx()) : { text: 'I cannot answer questions in this mode.', external: false };
+    msgs.push(say('tutor', a.external ? `External, not from your notes: ${a.text}` : a.text, { kind: 'answer', external: !!a.external }));
+    return out(msgs);
+  }
+
   function result() {
     return {
       subsectionId: subsection.id,
@@ -104,7 +114,15 @@ export function createClientEncounter({ subsection, tutor, clientName = 'The cli
   }
 
   return {
-    start: guard(start), submit: guard(submit), notSure: guard(notSure), hint: guard(hint),
+    /** Swap the tutor (Claude failed, continue offline). Only before the problem has been fetched: after that the
+     *  scenario belongs to the old tutor and a different one could not judge advice on it. */
+    switchTutor(t) {
+      if (st.current) throw new Error('The client has already told their story, so the tutor cannot be swapped now.');
+      tutor = t;
+    },
+    start: guard(start), submit: guard(submit), notSure: guard(notSure), hint: guard(hint), ask: guard(ask),
+    /** True once the client's problem has been fetched. */
+    started: () => !!st.current,
     leave: () => { st.left = true; return result(); },
     result,
   };
