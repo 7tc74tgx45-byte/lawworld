@@ -3,6 +3,10 @@
 .lw-panel { width: min(820px, 96vw); height: min(640px, 94vh); display: flex; flex-direction: column; background: #151a26; color: #e6e9f2; border: 2px solid #34405e; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.6); overflow: hidden; }
 .lw-panel.small { width: min(420px, 94vw); height: auto; max-height: 94vh; }
 .lw-panel.medium { width: min(640px, 96vw); height: auto; max-height: 94vh; overflow-y: auto; }
+.lw-panel.encounter { border-color: var(--tc, #34405e); }
+.lw-pip.todo { color: #566180; }
+.lw-transcript { scroll-behavior: smooth; }
+.lw-error .lw-btn { margin: 0; }
 .lw-panel.tall { width: min(900px, 96vw); }
 .lw-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #1c2335; border-bottom: 1px solid #34405e; flex-wrap: wrap; }
 .lw-swatch { width: 22px; height: 22px; border-radius: 4px; border: 2px solid #0008; flex: none; }

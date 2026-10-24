@@ -61,8 +61,8 @@ export function openSettings({ onClosed } = {}) {
       btn.disabled = false;
     }
   };
-  const bClaude = button('Test Claude', null, () => run(bClaude, claudeStatus, testClaudeConnection));
-  const bObs = button('Test Obsidian', null, () => run(bObs, obsStatus, testObsidian));
+  const bClaude = button('Test Claude connection', null, () => run(bClaude, claudeStatus, testClaudeConnection));
+  const bObs = button('Test Obsidian connection', null, () => run(bObs, obsStatus, testObsidian));
 
   const certNote = el('div', 'lw-note');
   certNote.append(

@@ -72,7 +72,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - `src/api/offlineTutor.js`: same interface, built-in bank (`src/data/offlineBank.js`) plus keyword-overlap evaluation against `keyConcepts`. Write a full 7-stage bank for at least the first 3 Contract subsections and the first Tort subsection, grounded in the vault notes (use `vault_read`).
   - Tests: `extractSection`, JSON parsing/repair, offline evaluator verdicts.
 
-- [ ] **T07 — Encounter UI and Settings**
+- [x] **T07 — Encounter UI and Settings**
   - DOM overlay (`src/ui/encounter.js`, CSS in `src/style.css`) over the canvas: tutor name and portrait swatch, scrolling transcript, multi-line answer box (Enter submits, Shift+Enter new line), buttons **Submit**, **Hint**, **I'm not sure**, **Ask a question**, **Leave**; MCQ options as buttons; stage pips 1–7; offline-mode badge; loading state while Claude thinks; readable error if a call fails (with "retry" and "continue offline").
   - While any overlay is open, Phaser keyboard input is disabled and key captures released (otherwise W/A/S/D and Space can't be typed); re-enable on close.
   - Settings overlay (Esc menu): Claude API key, model, Obsidian URL and token, **Test connection** buttons with clear success/failure text and the instruction to open `https://127.0.0.1:27124` once and accept the certificate.

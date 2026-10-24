@@ -476,3 +476,36 @@ I changed no source files.
 - **Banks not covered:** Offline mode shows "bank doesn't cover this" for every other building. The study-door UI (T09) must call `chooseMode` and `hasOfflineBank`.
 
 **Next:** Wire the study door in T09: tutor picker, `chooseMode`, and the offline-bank check. T08 adds session write-back. After that, try Claude mode against the real vault and tune the prompts.
+
+## T07 — done — 2026-10-24 02:16:33
+Cost $0.68 · 4 min · attempt 2
+
+**What changed:** The encounter overlay, Esc menu and Settings were mostly built in an earlier session. This session I reviewed them against the spec, tidied them up, fixed a few bugs and added tests. `npm run build` passes and so does `npm test` (147 tests). I could not open a browser here, so none of the overlay behaviour has been seen on screen.
+
+What the UI does now:
+- **Encounter overlay:** `src/ui/encounter.js` shows the tutor name and colour swatch, the scrolling transcript, and a multi-line box where Enter submits and Shift+Enter adds a new line. It has Submit, Hint, I'm not sure, Ask a question and Leave buttons, and MCQ options as buttons. Seven stage pips run along the top, with an offline or online badge. A "…is thinking" indicator shows while the tutor works.
+- **Errors:** A failed call shows a readable message with Retry and, when running online, Continue offline. Retry never counts an answer twice. If the offline bank doesn't cover the building, the overlay goes back to the previous tutor and says why.
+- **Keyboard:** Every overlay (encounter, menu, settings) goes through one shared lock. While any is open, Phaser keyboard input is off and key captures are released, so W/A/S/D/Space/E can be typed. They come back when the last overlay closes. Esc inside an encounter does not close it, so a stray press can't drop you out.
+- **Settings:** Esc opens the menu, then Settings. It has the Claude key, model, Obsidian URL and token, plus "Test Claude connection" and "Test Obsidian connection" buttons with clear success or failure text. It also carries the instruction to open `https://127.0.0.1:27124` once and accept the certificate.
+- **Saving the result:** The encounter's result is written to progress and the save exactly once. That happens when the verdict is reached. If you leave early, it happens on Leave, so leaving early gives *explored*. If nothing was answered, nothing changes.
+
+What I changed this session:
+- **New `src/logic/encounterView.js`:** It holds the logic for which controls show in which state. It is pure, so it can be tested.
+- **Rewrote `src/ui/encounter.js` to use it.**
+- **Fixed bugs:**
+  - Asking a question on an MCQ now works.
+  - A too-short answer or question stays in the box instead of vanishing.
+  - A reply that arrives after you've left can no longer touch a closed overlay.
+  - The encounter result is no longer recorded twice.
+  - Leaving a verdict screen no longer tries to record again.
+- **Added `tests/encounterView.test.js`:** It checks the control logic, that no skip control exists, and that an overlay-style driver plays the offline demo to a verdict.
+
+**Try it:** Run `npm run dev`, walk to the grey "Contract Law" box and press E. Play the whole encounter. Try typing W/A/S/D and Space in the answer box. Try Hint, "I'm not sure", Ask a question and Leave. After the verdict, reload and check that the result persisted. Press Esc and open Settings to see the connection tests. To see the error box, save a bogus Claude key. The demo itself still runs offline, so the error box will only appear once T09 wires Claude into the study door.
+
+**Design notes:** - **Nothing seen in a browser:** The DOM and Phaser behaviour is untested by machine, since only the logic is unit-tested.
+- **Leave-and-return rule:** A verdict that finishes the encounter is recorded immediately, so closing the overlay afterwards does nothing extra. Leaving mid-encounter records *explored* plus gaps.
+- **Intro "Continue" button:** The intro stage is not a question, so it has a Continue button. No other step has a skip.
+- **Demo always offline:** The demo "Contract Law" box still always uses the offline tutor. The Claude path through the overlay (thinking state, retry, continue offline) is built but only exercised for real once T09 adds the study door.
+- **Tutor picker:** There is no tutor picker yet, which is T09. The preference is read from the save, defaulting to Hale.
+
+**Next:** T08 writes the TUTOR-SESSION note when an encounter ends. T09 adds the study door with the tutor picker and `chooseMode`.

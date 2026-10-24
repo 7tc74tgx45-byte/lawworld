@@ -156,21 +156,40 @@ export default class GameScene extends Phaser.Scene {
     // The demo subsection has no vault heading, so Claude can only be used for real curriculum subsections.
     // Until the world is generated from the curriculum (T09) the demo always runs offline.
     void mode;
+    let recorded = false;
     openEncounter({
       subsection: sub,
       tutor: makeOfflineTutor(),
       makeOfflineTutor,
       priorGaps: openGaps(this.saveStore.state.progress, { subsectionId: sub.id }),
-      onOpen: () => {},
+      // The encounter's end writes its result into progress + save exactly once:
+      // on the verdict (onFinish), or when the player leaves early (onClose, not finished).
+      onFinish: (res) => {
+        recorded = true;
+        this.recordEncounter(sub, res);
+      },
       onClose: (res) => {
         this.encounterOpen = false;
-        // Encounter end writes the result into progress + save (immediate save).
-        this.saveStore.applyEncounter(res, { subsection: sub });
-        const gaps = res.gaps.length;
-        this.banner.setText(`${sub.title}: ${res.outcome.toUpperCase()}${gaps ? ` (${gaps} gap${gaps > 1 ? 's' : ''} logged)` : ''}`);
-        this.time.delayedCall(6000, () => this.banner.setText(''));
+        if (!recorded) this.recordEncounter(sub, res);
       },
     });
+  }
+
+  /** Write an encounter result into progress and save (immediate), and tell the player what happened. */
+  recordEncounter(sub, res) {
+    const changed = this.saveStore.applyEncounter(res, { subsection: sub });
+    if (!changed) {
+      this.showBanner(`${sub.title}: nothing answered, so nothing changed.`);
+      return;
+    }
+    const gaps = res.gaps.length;
+    this.showBanner(`${sub.title}: ${res.outcome.toUpperCase()}${gaps ? ` (${gaps} gap${gaps > 1 ? 's' : ''} logged)` : ''}`);
+  }
+
+  showBanner(text, ms = 6000) {
+    this.banner.setText(text);
+    this.bannerTimer?.remove();
+    this.bannerTimer = this.time.delayedCall(ms, () => this.banner.setText(''));
   }
 
   openMenu() {
