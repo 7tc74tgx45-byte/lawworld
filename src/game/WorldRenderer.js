@@ -27,6 +27,7 @@ export default class WorldRenderer {
     makeWeatherTextures(scene);
     makeGardenTextures(scene);
     this.stateKey = new Map();
+    this.alertIcons = new Map(); // buildingId -> Image (needs-review icon)
     this.addFurniture();
   }
 
@@ -44,6 +45,11 @@ export default class WorldRenderer {
     for (const b of world.buildings) {
       const spr = scene.add.image(b.tx * TILE_SIZE, b.ty * TILE_SIZE, this.buildingTexture(b, 'locked')).setOrigin(0).setDepth(b.ty * TILE_SIZE + 64);
       this.buildingSprites.set(b.id, spr);
+      // Alert icon above the building door (centred, slightly above mid-height). Hidden until explored.
+      const alertX = b.tx * TILE_SIZE + (b.side === 2 ? 32 : 16);
+      const alertY = b.ty * TILE_SIZE + 8;
+      const alert = scene.add.image(alertX, alertY, 'needs-review').setOrigin(0.5, 1).setDepth(b.ty * TILE_SIZE + 72).setVisible(false);
+      this.alertIcons.set(b.id, alert);
     }
   }
 
@@ -54,6 +60,8 @@ export default class WorldRenderer {
       if (this.stateKey.get(b.id) === s) continue;
       this.stateKey.set(b.id, s);
       this.buildingSprites.get(b.id).setTexture(this.buildingTexture(b, s));
+      // Show alert icon only on buildings that have been explored but not yet consolidated.
+      this.alertIcons.get(b.id)?.setVisible(s === 'explored');
     }
     this.lit = new Set(litDistricts);
     this.paintBraziers();

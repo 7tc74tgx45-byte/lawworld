@@ -78,6 +78,20 @@ export function makeGardenTextures(scene) {
     R(c, '#2a7fd4', 7, 3, 2, 2); R(c, '#2a7fd4', 6, 5, 4, 2); R(c, '#2a7fd4', 5, 7, 6, 4); R(c, '#2a7fd4', 6, 11, 4, 1);
     R(c, '#7cc4ff', 6, 7, 2, 3);
   });
+  // "Needs review" alert icon: orange exclamation bubble floated over explored-but-not-consolidated buildings.
+  canvasTexture(scene, 'needs-review', 16, 20, (c) => {
+    // Bubble outline
+    R(c, '#5a3000', 4, 0, 8, 1); R(c, '#5a3000', 3, 1, 1, 12); R(c, '#5a3000', 12, 1, 1, 12); R(c, '#5a3000', 4, 13, 8, 1);
+    // Bubble fill (warm amber)
+    R(c, '#fff3d6', 4, 1, 8, 12);
+    // Tail
+    R(c, '#5a3000', 7, 14, 2, 1); R(c, '#5a3000', 7, 15, 1, 1);
+    R(c, '#fff3d6', 7, 14, 2, 1);
+    // Exclamation bar
+    R(c, '#c05800', 7, 3, 2, 5);
+    // Exclamation dot
+    R(c, '#c05800', 7, 10, 2, 2);
+  });
   // Soft round glow: concentric translucent discs (no gradients needed, stays pixel-ish).
   canvasTexture(scene, 'glow', 96, 96, (c) => {
     for (let r = 46; r > 2; r -= 4) {

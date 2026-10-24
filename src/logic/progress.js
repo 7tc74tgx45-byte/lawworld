@@ -63,11 +63,15 @@ function indexOf(curriculumOrIndex) {
 
 const storedStatus = (progress, id) => progress.subsections?.[id]?.status ?? null;
 
-/** Direct prerequisites that are not yet *consolidated* (what the padlock lists). */
+/** Direct prerequisites that have not been at least *explored* yet (what the padlock lists).
+ * explored is enough to unlock the next building; consolidated remains the quality goal
+ * and is flagged visually on buildings that need revisiting.
+ */
 export function unmetPrerequisites(curriculumOrIndex, progress, id) {
   const sub = indexOf(curriculumOrIndex).get(id);
   if (!sub) return [];
-  return sub.prerequisites.filter((p) => storedStatus(progress, p) !== 'consolidated');
+  const unlocked = new Set(['explored', 'consolidated']);
+  return sub.prerequisites.filter((p) => !unlocked.has(storedStatus(progress, p)));
 }
 
 /** locked | available | explored | consolidated. Unknown ids are 'locked'. */
