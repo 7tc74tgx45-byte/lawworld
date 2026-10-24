@@ -85,12 +85,10 @@ export function subsectionState(curriculumOrIndex, progress, id, { vaultNotes } 
   if (!index.has(id)) return 'locked';
   const stored = storedStatus(progress, id);
   if (stored === 'consolidated' || stored === 'explored') return stored;
-  // Vault-unlock: if the note for this district is in the vault, skip prerequisite gate.
-  if (vaultNotes) {
-    const sourceFile = index.get(id)?.sourceFile;
-    if (sourceFile && vaultNotes.has(sourceFile)) return 'available';
-  }
-  return unmetPrerequisites(index, progress, id).length ? 'locked' : 'available';
+  // All buildings are always available — no prerequisite gating.
+  // Progress (explored / consolidated) is still tracked for braziers and journal,
+  // but the map is never locked behind earlier content.
+  return 'available';
 }
 
 /** { [id]: state } for every subsection in the curriculum.
