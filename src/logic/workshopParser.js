@@ -125,6 +125,24 @@ export function parseWorkshopNote(markdown, filename = '') {
     }
   }
 
+  // ── Fallback: treat any non-meta ## section as a scenario ───────────────
+  // Covers notes whose sections are named things like "## 1. Certainty of Terms"
+  // or "## Exercise 2: ECHR Rights Problem Question" rather than Scenario/Question N.
+  if (scenarios.length === 0) {
+    const SKIP_SECTION = /things\s+to\s+know\s+cold|cases\s+used|citation|key\s+cases|key\s+stat|summary\s+table|overview|at\s+a\s+glance|format$/i;
+    for (let si = 0; si < sectionStarts.length; si++) {
+      const { name, startLine } = sectionStarts[si];
+      if (SKIP_SECTION.test(name)) continue;
+      const endLine = si + 1 < sectionStarts.length ? sectionStarts[si + 1].startLine : lines.length;
+      const sectionLines = lines.slice(startLine + 1, endLine);
+      const body = sectionLines.join('\n').replace(/^-{3,}\s*$/mg, '').trim();
+      if (!body) continue;
+      // Strip leading numbering from name: "1. Certainty of Terms" → "Certainty of Terms"
+      const cleanName = name.replace(/^\d+[.)\s]+/, '').trim();
+      scenarios.push({ name: cleanName, scenarioText: body, modelAnswer: '' });
+    }
+  }
+
   return { title, scenarios, flashCards };
 }
 
