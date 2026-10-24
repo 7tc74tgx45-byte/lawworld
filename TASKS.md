@@ -86,7 +86,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
 
 ## World
 
-- [ ] **T09 — World map generated from the curriculum**
+- [x] **T09 — World map generated from the curriculum**
   - Replace the single green grid with a tilemap built from `curriculum.js`: hub town (spring) in the centre, paths to Contract (summer), Tort (autumn), Public Law (winter). Each district is a cluster of buildings around a signpost and an unlit brazier; each subsection is a building with a door. Layout is computed (deterministic) so new vault notes add buildings without hand-editing.
   - Collision with buildings, trees, water, fences. Camera bounded to the world. Region name banner on entering a region.
   - Walk to a door and press **E**: available → choose tutor → encounter; locked → padlock tooltip listing prerequisites.

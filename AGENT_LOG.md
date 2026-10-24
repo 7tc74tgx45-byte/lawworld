@@ -576,3 +576,40 @@ Cost $2.10 · 24 min · attempt 1
 2. Rewrite `GameScene.js`: render tiles from the world data, and add static collision bodies for buildings, trees, water and fences. Bound the camera and physics world to the map, and show a region banner on entering a region.
 3. Draw building colours by `computeStates` state: grey for locked with a padlock, blue for available, amber for explored, green for consolidated. Draw an unlit brazier and a signpost per district.
 4. Door E: for an available or explored building, show a tutor picker (default `suggestedTutor` or the saved `tutorPreference`), then `chooseMode`. Run the Claude tutor and `loadPriorSessions` if both keys are set; otherwise run the offline tutor if there is a bank, and say why if there isn't. For a locked building, show a padlock tooltip listing `unmetPrerequisites` by title. Remove the demo box, and save `player.region`.
+
+## T09 — done — 2026-10-24 03:04:25
+Cost $1.85 · 18 min · attempt 2
+
+**What changed:** The green grid and the grey demo box are gone. The game now builds a world from the curriculum, with a hub town in the centre. Contract is to the east, Tort to the south and Public Law to the north, each joined to the hub by a bridged path. I couldn't run the game in a browser overnight, so none of the drawing or door interaction has been seen on screen. The build and all 181 tests pass.
+
+- **Districts and buildings:** every district is a fenced yard with a signpost and an unlit brazier. Each subsection is a building with a door. A new vault note or heading adds buildings automatically, and a test adds a district to confirm that.
+- **Colours:** buildings show their state. Locked is grey with a padlock, available is blue, explored is amber and consolidated is green. A brazier lights when its whole district is consolidated.
+- **Collision:** trees, water, fences, buildings, signposts and braziers all block the player. The map edge is water and the camera is bounded to the map.
+- **Region banner:** entering a region shows a fading banner with the region name, module and season.
+- **Doors:** walking to a door shows a prompt, and E opens one of two panels.
+  - A locked door lists the prerequisites still to consolidate, by title. Explored is not enough to unlock.
+  - An open door shows a tutor picker. The suggested or last-used tutor is marked ★, and your choice is saved per building.
+- **Which tutor runs:** the tutor is Claude when both keys are set, otherwise the offline bank. A building with neither says so instead of failing.
+- **Tests:** `tests/layout.test.js` covers one building per subsection, no overlaps, solid buildings with walkable doors, every door reachable from the hub, region placement, determinism and collision. `tests/doorInfo.test.js` covers the locked and tutor-picker logic.
+- **Save:** your position, region and facing are saved. A saved position that is now inside a wall starts you at the hub fountain.
+
+**Try it:** Run `npm run dev` and open the page.
+
+1. You start at the hub fountain, in the Foundations town. Walk with WASD or the arrow keys.
+2. Walk along the east path to Contract. The region banner appears when you cross in.
+3. Find the first Contract district. Walk to a blue building's door and press E.
+4. Pick a tutor and play. Only the first three Contract buildings and the first Tort building have an offline bank. Other buildings need both a Claude key and an Obsidian token, and the picker says so.
+5. Walk to a grey padlocked building and press E to see the prerequisites list.
+6. Finish or leave an encounter and the building changes colour.
+
+**Design notes:** - **No Phaser physics:** collision is done in pure code (`worldQuery.js`) instead of Phaser arcade bodies. A world of several thousand tiles would need thousands of static bodies, and this way collision is tested without Phaser. I removed arcade physics from `main.js`.
+- **Ground drawing:** the ground is drawn in 16×16-tile chunks only near the camera and freed when far away. The map is large because there are about 170 buildings.
+- **Prompt overlap:** the prompt at a door uses the facing direction to choose between doors on opposite sides of a lane. It might be fiddly where the lane is only three tiles wide.
+- **Hub:** the first curriculum region (Foundations) is the hub town, with a plaza and a fountain. `buildWorld` supports a hub plus up to three regions and throws if there are more.
+- **Unused files:** `src/data/zones.js` and `src/data/demoSubsection.js` are no longer used. I left them in place and they can be deleted.
+- **Look:** the art is functional placeholder pixel art for T10 to polish. There is no walk animation, cat or weather yet.
+- **Gaps in testing:**
+  - I didn't test the Phaser rendering or the encounter flow from the door, because I couldn't run it in a browser.
+  - The door-to-encounter wiring reuses the existing, tested encounter code.
+
+**Next:** T10 should add the seasonal tile and tree art, weather particles, the player walk animation and the cat. T11 is the journal. Also consider offline banks for more buildings: only 4 of about 170 can be played without Claude and Obsidian.
