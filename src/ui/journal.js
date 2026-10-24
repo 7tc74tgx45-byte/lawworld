@@ -37,9 +37,12 @@ function statsSection(stats) {
   return s;
 }
 
-function materialsSection(materials, served) {
-  const s = section('Materials', `Earned by advising clients (${served} served). Each region pays in its own material.`);
+function materialsSection(materials, served, seeds = 0, plants = 0) {
+  const s = section('Materials', `Earned by advising clients (${served} served). Each region pays in its own material. Seeds come from solid answers and are planted in the hub garden.`);
   const row = el('div', 'lw-mats');
+  const seedChip = el('span', 'lw-mat' + (seeds ? '' : ' none'));
+  seedChip.append(el('b', null, String(seeds)), document.createTextNode(` Seeds (${plants} planted)`));
+  row.append(seedChip);
   for (const m of materials) {
     const chip = el('span', 'lw-mat' + (m.count ? '' : ' none'));
     chip.append(el('b', null, String(m.count)), document.createTextNode(` ${m.label}`));
@@ -147,7 +150,7 @@ export function openJournal({ curriculum, save, onClosed } = {}) {
   const head = el('div', 'lw-jhead');
   head.append(el('h2', 'lw-h', 'Journal'), button('Close (Tab)', 'primary', close));
   const body = el('div', 'lw-jbody');
-  body.append(statsSection(j.stats), materialsSection(j.materials, j.clientsServed), revisitSection(j.revisit), treeSection(j.tree), sessionsSection(j.sessions));
+  body.append(statsSection(j.stats), materialsSection(j.materials, j.clientsServed, j.seeds, j.plants), revisitSection(j.revisit), treeSection(j.tree), sessionsSection(j.sessions));
   panel.append(head, body);
   overlay.focus();
   return { close };

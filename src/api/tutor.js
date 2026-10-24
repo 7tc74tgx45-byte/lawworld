@@ -12,7 +12,7 @@ import { formatSessionMemory } from '../logic/sessionNote.js';
 import { parseWithRepair, REPAIR_PROMPT, cleanPrompt, cleanEvaluation, cleanText } from '../logic/tutorJson.js';
 import {
   contextBlock, introPrompt, questionPrompt, mcqPrompt, evaluatePrompt, hintPrompt, mcqHintPrompt,
-  notSurePrompt, answerPrompt, webAnswerPrompt, clientScenarioPrompt, clientEvaluatePrompt,
+  notSurePrompt, answerPrompt, webAnswerPrompt, clientScenarioPrompt, clientEvaluatePrompt, retrievalEvaluatePrompt,
 } from '../logic/tutorPrompts.js';
 
 export const WEB_SEARCH_TOOL = { type: 'web_search_20250305', name: 'web_search', max_uses: 3 };
@@ -161,6 +161,12 @@ export function createClaudeTutor(opts = {}) {
         cleanEvaluation,
       );
       return ev;
+    },
+
+    /** Garden watering (T13): judge one typed retrieval answer on a single concept against the live note. */
+    async retrieve(ctx, { concept, question, answer }) {
+      const { block } = await load(ctx);
+      return askJson(retrievalEvaluatePrompt(block, { concept, question, answer }), cleanEvaluation);
     },
 
     /** A client's problem for this subsection (T12), built from the live note section and open gaps. */

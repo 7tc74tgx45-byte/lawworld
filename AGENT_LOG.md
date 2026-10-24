@@ -755,3 +755,47 @@ Cost $3.05 · 28 min · attempt 1
 **Design notes:** —
 
 **Next:** Continue this task.
+
+## T13 — partial — 2026-10-24 04:21:16
+Cost $1.79 · 8 min · attempt 2
+
+**What changed:** The knowledge garden and lit braziers are built and wired into the game. Build passes and all 233 tests pass, including 14 new garden tests. I haven't run it in a browser, so none of the visuals or overlay layout have been checked by eye.
+
+**Seeds:** each solid answered stage 2–5 in an encounter earns one seed, up to 4 per encounter. Checkpoint MCQs earn none. Leaving with nothing answered earns nothing.
+
+**Garden plots:** the hub has six plots below the fountain. Press E at an empty plot to pick what to remember. Open gaps are listed first, then consolidated topics you haven't studied or watered for longest. One plant per concept.
+
+**Watering:**
+- Press E at a plant and answer a typed retrieval question on that concept. There is no skip.
+- Hint, "I'm not sure" and (with Claude) Ask a question are all available.
+- Only a solid answer grows the plant, through five stages from seed to tree. A partial answer keeps it alive without growth. A missing answer or "I'm not sure" does nothing to the plant and logs the gap.
+- A solid answer on a withered plant revives it without growing it. A solid answer also closes the gap on that concept.
+- With Claude and Obsidian, Claude judges the answer against your live note, using a new `tutor.retrieve`. Without them, a clearly labelled keyword check runs. It won't mark a bare repeat of the concept name as solid.
+
+**Withering:** a plant withers after 3 unwatered in-game days. Withered plants draw as greyed versions of each stage. The sprites refresh every 30 seconds.
+
+**Braziers:** a district's brazier lights when every building in it is consolidated. The result is saved, so it stays lit even if the vault later adds a building to that district. It gets a flickering additive glow and a banner when it first lights.
+
+**Other changes:** the journal now shows seeds and planted count. The on-screen hint line was fixed and now mentions clients and garden plots.
+
+**Try it:** Run `npm run dev`.
+
+1. Study a building (offline banks exist for the first Contract subsections and Assault) and answer solidly. Check the journal (Tab): Seeds should be above 0.
+2. Walk to the hub garden, in the row of six plots below the fountain. Press E at an empty plot and choose a concept.
+3. Press E at the plant to water it. Type an answer, or use Hint or "I'm not sure". A solid answer grows it a stage.
+4. Try watering again straight away. You should be told the soil is damp.
+5. To see withering, edit `lastWatered` in the saved game (localStorage `lawworld.save`) to more than 24 hours ago and reload. The plant should look greyed.
+6. To see a brazier light, consolidate every building in one district. A banner appears and the brazier glows.
+
+**Design notes:** - **In-game day length:** I set one in-game day to 8 real hours, so a plant withers after 24 hours unwatered. The earlier 20-minute value would have withered the whole garden between two evening study sessions, which defeats spaced repetition. The value is `GAME_DAY_MS` in `src/logic/garden.js` if you want it faster or slower.
+- **Damp soil:** a plant watered less than 10 minutes ago can't be watered again. This stops grinding one concept for free growth. It wasn't in the task as written.
+- **Review time:** watering stamps a `lastReviewed` time on the subsection, so spaced-repetition ordering reflects retrieval and not just the last encounter.
+- **Offline check:** it is crude and the UI says so. It can't judge reasoning quality, so a solid answer there is only a keyword match.
+- **Unfinished work:** I did not finish the `GameScene.js` wiring, the garden overlay and the new CSS review. `.lw-garden` has no dedicated CSS; it relies on existing panel styles. The garden overlay's `Ask a question` call uses `tutor.answerQuestion` with a minimal context, which wasn't tested.
+- **Materials:** the vision says materials buy extra hints or light braziers. That is not implemented. Braziers light only through consolidation.
+
+**Next:** 1. Play it in a browser and check the garden overlay layout, plot positions and the greyed withered sprites. Add `.lw-garden` CSS if the overlay looks off.
+2. Check that the glow sits correctly behind the lit brazier. The offset in `WorldRenderer.glowFor` is a guess.
+3. Add a "plants need water" indicator, such as a small icon over thirsty or withered plots, and a note in the journal.
+4. Let materials buy extra hints or light braziers, as the vision describes.
+5. Add a dedicated offline retrieval question bank, so the offline check isn't just keyword matching on concept names.

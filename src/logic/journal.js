@@ -81,6 +81,8 @@ export function buildJournal(curriculum, save) {
     stats: statBars(progress),
     materials: materialList(save),
     clientsServed: save.clients?.served ?? 0,
+    seeds: save.inventory?.seeds ?? 0,
+    plants: (save.garden?.plots ?? []).length,
     tree: moduleTree(curriculum, progress),
     revisit: revisitList(curriculum, progress),
     sessions: recentSessions(save.sessions ?? []),

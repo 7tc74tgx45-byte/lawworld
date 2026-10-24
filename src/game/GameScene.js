@@ -13,7 +13,10 @@ import { getClaudeKey } from '../api/claude.js';
 import { getObsidianConfig } from '../api/obsidian.js';
 import { curriculum } from '../data/curriculum.js';
 import { allDistricts, findSubsection, locateSubsection } from '../logic/curriculum.js';
-import { computeStates, isBrazierLit, openGaps } from '../logic/progress.js';
+import { computeStates, openGaps } from '../logic/progress.js';
+import { syncBraziers } from '../logic/garden.js';
+import { openGarden } from '../ui/garden.js';
+import Garden from './Garden.js';
 import { describeDoor } from '../logic/doorInfo.js';
 import { buildWorld } from '../logic/layout.js';
 import { TILE_SIZE, blockedAt, boxBlocked, regionAt, zoneAt, moveWithCollision, doorNear, tileCentre } from '../logic/worldQuery.js';
@@ -105,9 +108,12 @@ export default class GameScene extends Phaser.Scene {
       .text(400, 90, '', { fontSize: '30px', fontStyle: 'bold', fill: '#ffffff', stroke: '#000000', strokeThickness: 5, align: 'center' })
       .setOrigin(0.5).setScrollFactor(0).setDepth(100001).setAlpha(0);
     this.add
-      .text(8, 8, 'WASD / Arrows to move · E at a door · Tab journal · Tab journal · Esc menu', { fontSize: '12px', fill: '#ffffff', backgroundColor: '#00000066', padding: { x: 4, y: 2 } })
+      .text(8, 8, 'WASD / Arrows to move · E at a door, client or garden plot · Tab journal · Esc menu', { fontSize: '12px', fill: '#ffffff', backgroundColor: '#00000066', padding: { x: 4, y: 2 } })
       .setScrollFactor(0).setDepth(100000);
 
+    this.garden = new Garden(this, world);
+    this.garden.refresh(this.saveStore.state);
+    this.time.addEvent({ delay: 30000, loop: true, callback: () => this.garden.refresh(this.saveStore.state) }); // plants wither with time
     this.refreshStates();
     // Client NPCs (T12): one per region while something there is explored. A served client leaves for 5 minutes.
     this.clientNpcs = new ClientNpcs(this, world, { canServe: canServeClient });
@@ -149,13 +155,60 @@ export default class GameScene extends Phaser.Scene {
   refreshStates() {
     const progress = this.saveStore.state.progress;
     this.states = computeStates(curriculum, progress);
-    const lit = new Set(this.districtList.filter((d) => isBrazierLit(d, this.states)).map((d) => d.id));
-    this.renderer.applyStates(this.states, lit);
+    // Braziers stay lit once earned (saved), even if the vault later adds a building to the district.
+    const synced = syncBraziers(this.saveStore.state, this.districtList, this.states);
+    if (synced.newlyLit.length) {
+      this.saveStore.update(() => synced.save);
+      this.saveStore.save();
+      const names = synced.newlyLit.map((id) => this.districtList.find((d) => d.id === id)?.title ?? id);
+      if (this.garden) this.showBanner(`The brazier is lit: ${names.join(', ')} fully consolidated.`, 8000);
+    }
+    this.renderer.applyStates(this.states, synced.lit);
+  }
+
+  /** Apply a garden change (plant / water) to the save, write it at once, and redraw the plots. */
+  updateGarden(fn) {
+    const r = fn(this.saveStore.state);
+    if (r?.ok) {
+      this.saveStore.update(() => r.save);
+      this.saveStore.save();
+      this.garden.refresh(this.saveStore.state);
+      this.refreshStates();
+      this.refreshClients();
+    }
+    return r;
+  }
+
+  /** E at a garden plot: plant a seed, or water the plant by answering a retrieval question. */
+  openGardenPlot(plotId) {
+    const state = this.saveStore.state;
+    openGarden({
+      plotId,
+      curriculum,
+      getSave: () => this.saveStore.state,
+      update: (fn) => this.updateGarden(fn),
+      onDone: (msg) => this.showBanner(msg, 7000),
+      makeTutor: () => {
+        const plot = state.garden.plots.find((p) => p.id === plotId);
+        const hasClaude = !!getClaudeKey() && !!getObsidianConfig().token;
+        if (!plot || !hasClaude) return null;
+        return createClaudeTutor({ personaId: state.tutorPreference?.[plot.subsectionId] ?? 'chen' });
+      },
+    });
   }
 
   /** Reconcile client sprites with the save (new explored subsections, cooldowns). */
   refreshClients() {
     this.clientNpcs?.refresh(this.saveStore.state);
+  }
+
+  /** The text over a garden plot. */
+  plotPrompt(v) {
+    const seeds = this.saveStore.state.inventory.seeds;
+    if (!v || v.empty) return `Knowledge garden: empty plot\nPress E to plant a seed (${seeds} in your bag)`;
+    if (v.status === 'withered') return `${v.concept}: withered\nPress E to answer a question and revive it`;
+    if (v.damp) return `${v.concept}: ${v.stageName} (watered recently)\nPress E to check on it`;
+    return `${v.concept}: ${v.stageName}\nPress E to water it (answer a question)`;
   }
 
   /** Region name banner when the player crosses into a region. */
@@ -371,6 +424,12 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
     const door = doorNear(this.world, this.player.x, this.player.y, this.facing);
+    const plot = !door && this.garden.nearest(this.player.x, this.player.y);
+    if (plot) {
+      this.prompt.setText(`${this.plotPrompt(plot.view)}`).setVisible(true);
+      if (Phaser.Input.Keyboard.JustDown(this.eKey)) this.openGardenPlot(plot.plotId);
+      return;
+    }
     if (door) {
       const state = this.states[door.id] ?? 'locked';
       const label = state === 'locked' ? '🔒 Locked: press E to see what unlocks it' : `Press E to study (${STATE_LABEL[state]})`;

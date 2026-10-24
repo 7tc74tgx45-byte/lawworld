@@ -1,7 +1,9 @@
 // Renders the generated world: ground chunks drawn lazily to canvas textures near the camera, plus building,
 // signpost and brazier sprites. Collision itself is pure (src/logic/worldQuery.js); nothing here is physics.
+import Phaser from 'phaser';
 import { TILE_SIZE } from '../logic/worldQuery.js';
 import { drawTile } from './tileDraw.js';
+import { makeGardenTextures } from './gardenDraw.js';
 import { ensureBuildingTexture, makeFurnitureTextures, makeCharacterTextures, makeWeatherTextures } from './sprites.js';
 
 const CHUNK_TILES = 16;
@@ -16,12 +18,14 @@ export default class WorldRenderer {
     this.chunkRows = Math.ceil(world.rows / CHUNK_TILES);
     this.buildingSprites = new Map(); // id -> Image
     this.braziers = new Map(); // districtId -> Image
+    this.glows = new Map(); // districtId -> additive glow Image (lit braziers only)
     this.lit = new Set();
     this.flame = 0;
     this.seasonOf = new Map(world.regions.map((r) => [r.id, r.season]));
     makeFurnitureTextures(scene);
     makeCharacterTextures(scene);
     makeWeatherTextures(scene);
+    makeGardenTextures(scene);
     this.stateKey = new Map();
     this.addFurniture();
   }
@@ -57,8 +61,30 @@ export default class WorldRenderer {
 
   paintBraziers() {
     for (const [id, img] of this.braziers) {
-      const key = this.lit.has(id) ? `brazier-lit-${this.flame}` : 'brazier-unlit';
+      const isLit = this.lit.has(id);
+      const key = isLit ? `brazier-lit-${this.flame}` : 'brazier-unlit';
       if (img.texture.key !== key) img.setTexture(key);
+      this.glowFor(id, img, isLit);
+    }
+  }
+
+  /** A warm additive glow behind a lit brazier; created on first light, hidden if the brazier ever went out. */
+  glowFor(id, img, isLit) {
+    let glow = this.glows.get(id);
+    if (!isLit) { glow?.setVisible(false); return; }
+    if (!glow) {
+      glow = this.scene.add.image(img.x + 16, img.y + 12, 'glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(img.depth + 1).setAlpha(0.55);
+      this.glows.set(id, glow);
+    }
+    glow.setVisible(true);
+  }
+
+  /** Gentle flicker for every lit glow. */
+  pulseGlows(time) {
+    for (const g of this.glows.values()) {
+      if (!g.visible) continue;
+      g.setAlpha(0.5 + 0.12 * Math.sin(time / 260 + g.x) + 0.05 * Math.sin(time / 97 + g.y));
+      g.setScale(1 + 0.04 * Math.sin(time / 420 + g.x));
     }
   }
 
@@ -81,6 +107,7 @@ export default class WorldRenderer {
 
   /** Create chunks near the camera and free the ones far away. Call every frame (cheap when nothing changes). */
   update(cam, time = 0) {
+    this.pulseGlows(time);
     const flame = Math.floor(time / 220) % 2;
     if (flame !== this.flame) {
       this.flame = flame;
