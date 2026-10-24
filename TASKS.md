@@ -4,6 +4,10 @@ The overnight agent works through these **in order**, one per session. It ticks 
 
 Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
 
+**SESSION BUDGET: $7. Stop and commit whatever is done when the Anthropic API spend for this session reaches $7. Do not start a new task if completing it would exceed the budget.**
+
+**PRIORITY ORDER for this session: T96 → T101 → T102 → T92. Build these in this order. Skip T91 and T93 unless all four priority tasks are done and budget remains.**
+
 ## Vertical slice (run this first)
 
 - [x] **T00 — Playable encounter demo (offline, hardcoded)**
@@ -105,11 +109,8 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
 - [x] **T12 — Client NPCs**
   - Wandering client NPCs per region. Each brings a short problem built (by Claude, or the offline bank) from subsections the player has explored or consolidated, biased toward open gaps. Player types advice; the tutor evaluates using IRAC; client reacts; reward = region material and stat gains. Uses the encounter engine in a `client` mode (scenario → evaluation → one follow-up → verdict).
 
-- [ ] **T13 — Knowledge garden and braziers**
+- [x] **T13 — Knowledge garden and braziers**
   - Seeds from solid answers. Garden plots in the hub: plant (E), water by answering a quick retrieval question chosen by spaced repetition (open gaps first, then consolidated topics not seen recently). Growth stages; withered if not watered for 3 in-game days. Braziers light when a district is fully consolidated and stay lit (glow effect).
-
-- [ ] **T14 — QA pass against the vision**
-  - Read the whole codebase against VISION.md. Write `QA_REPORT.md`: what works, what violates the learning rules, bugs, missing pieces, ranked. Fix the top issues that fit this session; add the rest as new tasks below.
 
 - [x] **T15 — Atmospheric music (procedural)**
   - Create `src/audio/music.js`: Web Audio API ambient engine, no downloads needed.
@@ -171,33 +172,6 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
 - [x] **T22 — Garden retrieval variety**
   - Several question templates per concept (rule, case, apply-to-facts), and a small offline retrieval bank for the five banked subsections. Add a "needs water" icon over thirsty plots.
 
-- [ ] **T91 — Extra depth layer in encounters (VISION §1, "stages may loop")**
-  - Why: every encounter is the same flat 2→3→4→5 path, even where the note has real depth. VISION §1 says the tutor adds an extra layer when the note has more (Consideration → part payment → *Pinnel's Case* → *Foakes v Beer* → promissory estoppel). Neither provider does this, so a building like "Alteration Promises" teaches no more than a one-case building.
-  - Rule (pure, in `src/logic/encounterRules.js`): a subsection qualifies for a **layer** when it has 3 or more `keyCases`, or 4 or more `keyConcepts`. The layer is one extra typed question after stage 4 (Authority) and before stage 5. It asks the player to connect two authorities (how does the second qualify, overrule or build on the first?) or to take the rule to its limit. It is not a new numbered stage: the pips stay 1–7 and the consolidation rule is unchanged. It counts as an exchange, and can have follow-ups, hints and "I'm not sure" like any open stage. A `missing` layer answer logs gaps but cannot by itself block consolidation.
-  - Claude tutor (`src/api/tutor.js`, `src/logic/tutorPrompts.js`): add `layerPrompt`. It names two cases or concepts taken only from the live note section and the KEY CASES list, never invents authority, and asks for the link between them. Evaluate with the existing evaluation prompt and answer fencing.
-  - Offline: an optional `layer` entry on a bank subsection (prompt, model answer, hints, concept regexes). Write one for the Offer & Acceptance Framework and one for Assault. A bank without a `layer` skips it.
-  - Session note: `Covered` lists the layer line and its gaps appear under `Gaps`.
-  - Tests: a qualifying subsection gets exactly one layer question and a non-qualifying one gets none; a layer cannot be skipped; a `missing` layer answer cannot consolidate by itself but does not block consolidation when stages 3 and 5 are solid; hints do not leak the model answer; layer gaps reach the session note.
-  - Done when: `npm run build` and `npm test` pass; an offline encounter on a layered building shows one extra "going deeper" question between Authority and Application; Claude mode asks a layer question that cites only cases named in the note.
-  - Related, not in this task: VISION §1.3 wants old gaps to resurface at the start of the next encounter. Today the intro only mentions them. A later task could open with one typed recall question on the top open gap.
-
-- [ ] **T92 — Keep the map in step with the vault (live heading check and new-note districts)**
-  - Why: the curriculum is a static snapshot. VISION §2/§5 say new notes add new buildings and the game reads notes live. Today a renamed heading silently makes the tutor receive the whole note. Several vault notes have no district at all (for example `LAW7054-Contract-Week3-Consideration-Estoppel.md`, `LAW7054-Tort-W2-Duty-of-Care-Psychiatric-Injury.md`, `LAW7055-Parliamentary-Sovereignty-Notes.md`), so they are invisible to the player.
-  - Pure logic in `src/logic/vaultSync.js`: `parseHeadings(markdown)` returns `##` and `###` headings (ignoring `#` lines inside code fences). `diffAgainstCurriculum(curriculum, vaultFiles, headingsByFile)` returns `{ missingFiles, missingHeadings, unmappedNotes }`. `districtFromNote(file, headings)` builds a district with `makeDistrict`. Region comes from the `LAW7053/7054/7055` prefix and `Tort`/`Contract` in the name. Subsections are parallel entries (`pre: []`) and the district is marked `source: 'vault-live'`. Cheat sheets, indexes, `TUTOR-SESSION-*` and already-mapped notes are excluded. Notes whose region can't be guessed are reported, not placed.
-  - Browser glue in `src/api/vaultSync.js`: only if an Obsidian token is set, `listFiles()` plus `readNote` of each mapped note (batched, failures ignored) produces the diff at most once a day, cached in settings (never in the save). Offline or unreachable means the static map is used and nothing breaks.
-  - Surface it: Settings gets a "Check vault against the map" button with a readable report (headings that moved, notes with no building). The door panel says "this note's heading changed: the tutor is using the whole note" instead of failing silently. New-note districts are merged into the curriculum when the scene is created, so `buildWorld` places them.
-  - Hard rules: read-only on the vault; no note prose in the repo or cache (headings and filenames only); no study-note writes.
-  - Tests: heading parsing (code fences, trailing hashes), the diff, region guessing, exclusion rules, the merged curriculum keeps unique ids, valid prerequisites and no cycles, and `buildWorld` stays collision-free and reachable with generated districts.
-  - Done when: `npm run build` and `npm test` pass; with a stubbed vault listing containing one extra `LAW7054-` note, a new building appears in the Contract region; renaming a mapped heading in the stub gives a clear warning rather than silent whole-note context.
-
-- [ ] **T93 — Make consolidation feel like an event (result card and brazier moment)**
-  - Why: the verdict is a block of plain transcript text and the world barely reacts, so earning "consolidated" doesn't feel like it changed anything. This is feel and visual work, below T91 and T92. The Phaser parts have not been seen in a browser, so check them by eye in a dev run.
-  - Result card: when the verdict arrives, show a card in the encounter panel. It has one chip per stage (Plain English, Precision, Authority, Application, Checkpoint) coloured solid, partial or missing, the IRAC score 0–4 under Application, the seeds earned and stat gains, and the gaps as a "revisit" list. It is built by a pure `resultCardModel(result, rewards)` in `src/logic/encounterView.js`. The DOM only renders it. It is a display of the verdict, not a click-through that replaces any question.
-  - World reaction: after a `consolidated` close, the camera eases to the building, the door recolours with a short pulse, and if that completes the district the brazier lights with the existing glow plus the fanfare. Then the camera returns to the player. Input stays locked only for that short pan (under 2 s), and the overlay lock must not leak.
-  - Explored outcome gets a gentler version: explored tint, no fanfare, and the card says plainly what must come out solid to consolidate.
-  - Tests: `resultCardModel` for consolidated, explored and left-early results (no stage reported as answered that wasn't); reward lines match the real rewards; the card never shows a verdict the engine did not give.
-  - Done when: `npm run build` and `npm test` pass; finishing an encounter in a dev run shows the chips and rewards, and a consolidated building visibly pulses and lights its brazier (if the district is complete) on return to the world.
-
 - [ ] **T96 — Workshop buildings (problem question practice from Obsidian notes)**
   - Why: Fynn has real workshop prep notes in the vault (e.g. `LAW7054-Tort-W4-Workshop-Prep.md`) with structured scenarios and IRAC model answers. A Workshop building in each law district lets him practice problem questions in-game, either prepping before the real session or reviewing after.
   - Note format (already in vault, parse as-is):
@@ -220,32 +194,6 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Tests: scenario parser extracts correct text and model answer for each `## Scenario` block; `## Things to Know Cold` items parse correctly; week sorter orders W1–W9 correctly; offline path shows the right message and does not attempt a fetch; completing all scenarios in a week marks it done.
   - Done when: `npm run build` and `npm test` pass; with the Tort W4 workshop note in the vault, the Workshop building in the Tort district shows W4, entering runs through both Maria/Bill and Angela/Andy/Mike/Rajinder scenarios with tutor feedback, and the Things to Know Cold flash cards fire at the end.
 
-- [ ] **T94 — Player house with sleep / save ceremony**
-  - Why: the autosave already works silently, but sleeping gives a satisfying ritual endpoint to a study session — a day summary screen, a sense of progress, and an obvious "I'm done for now" moment. Good for habit-building.
-  - A small house structure placed in the hub area with a bed inside (accessible via a door). Entering and pressing E/Enter on the bed opens a "Sleep" overlay.
-  - Sleep overlay shows: today's date, subsections studied, cases mastered, seeds planted, XP gained this session. A "Sleep until morning" button flushes the autosave explicitly and closes with a short fade to black.
-  - On wake, a brief "Good morning" message with the current date. No functional game time system needed — purely cosmetic / ceremonial.
-  - The house interior is a tiny Phaser scene (or same scene, different room area) with a bed, bookshelf, desk — cosy study digs aesthetic.
-  - Tests: flush is called on sleep; overlay shows correct session stats; nothing breaks if session log is empty.
-  - Done when: player can walk into house, press E on bed, see summary, press sleep, get fade-out, and game is saved.
-
-- [ ] **T95 — World map overlay (M key)**
-  - Why: as the world grows (more law modules, more districts) it becomes hard to navigate without a birds-eye view. A map also makes the game feel like a proper RPG.
-  - Press M to toggle a full-screen map overlay drawn on a canvas element over the Phaser canvas.
-  - Map shows: all districts as labelled rectangles (colour-coded by module — Contract = blue, Tort = green, Criminal = red, Public Law = purple), the player's current position as a pulsing dot, consolidated districts with a gold border, unexplored ones in grey.
-  - Each district is clickable: clicking opens a tooltip with district name, subsection count, how many consolidated.
-  - Map data comes from the existing `buildWorld` curriculum — no new data source needed.
-  - M key closes the map; clicking outside a district also closes it.
-  - Tests: map renders without crashing when curriculum is empty; player dot updates on next open; clicking a district shows correct stats.
-  - Done when: pressing M in the game shows a clear, readable world map with at least the main Contract and Tort regions visible and correctly labelled.
-
-- [x] **T97 — /search command in tutor encounter**
-  - Why: tutor flags cases/concepts not in your notes; player needed a way to search the vault mid-encounter without leaving the game.
-  - During any tutor encounter, type `/search <query>` in the answer box. The game queries the Obsidian REST API `/search/simple/` endpoint and shows matching vault filenames in the transcript as a tutor message. Does not submit to Claude — purely a vault lookup.
-  - Implemented in `src/ui/encounter.js` — intercepts `/search ` prefix in `doSubmit`, calls `searchNotes()` from `src/api/obsidian.js`, renders results inline.
-  - Offline gracefully: if Obsidian is unreachable, shows the error message from the API call.
-  - Done: 2026-10-24.
-
 - [ ] **T101 — Case Library buildings (case-law MCQ from vault)**
   - Why: a dedicated building per district where you can drill on cases at any time — no prerequisites, always open. Draws on every case in the vault notes for that module, testing in both directions: case name → rule/facts, and facts/holding → case name.
   - Vault source: parse all study notes for the module (e.g. `LAW7054-*.md`) and extract the case table rows. Each row typically follows the pipe-table format `| *Case Name* [year] | Principle |` used in Poole-Ch2 and similar notes. The parser grabs every row where the first cell looks like a case citation (italic text, year in brackets).
@@ -259,3 +207,46 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Offline: vault notes are needed to build the question bank. If Obsidian is unreachable, show "Vault offline — connect Obsidian to access the Case Library." Same pattern as Workshop offline handling.
   - Tests: case parser extracts correct name and principle from a sample pipe-table note; distractor picker never returns the correct answer as a distractor; question bank deduplicates cases that appear in multiple notes; "All cases" mode includes cases from every matched note; offline path shows the right message and does not crash.
   - Done when: `npm run build` and `npm test` pass; with the Poole-Ch2 note in the vault, the Case Library in the Contract district shows the correct case count, entering runs a round of MCQ on those cases, and correct answers award seeds.
+
+- [ ] **T102 — Study Hall buildings (guided teach-mode sessions from vault notes)**
+  - Why: the existing encounter buildings are evaluative (IRAC, verdicts, grading). Students also need a low-stakes mode to *learn* content they haven't studied yet — e.g. an EU law chapter before the seminar. Study Hall is a tutor-led walkthrough: explain → check understanding → move on. No harsh grading, no IRAC structure.
+  - Building: one Study Hall per district, distinct from lecture halls — warmer aesthetic, reading-room feel (armchairs, lamp, bookshelves). Always unlocked (no prerequisites). Door label: "Study Hall — {district title}".
+  - Session flow:
+    1. Player picks a subsection from the district (a simple list menu, same subsections as the encounter buildings).
+    2. Tutor introduces the subsection in plain English — 2–3 sentences covering the core idea and why it matters. Draws on `keyConcepts`, `keyCases`, `statutes` from the curriculum plus the vault note.
+    3. For each key concept in turn: tutor explains it conversationally, gives an example or case illustration, then asks "can you put that in your own words?" or "what's the key principle here?" — open-ended, not MCQ.
+    4. Player types a response. Tutor gives warm, brief feedback ("exactly right", "close — the key bit is…", "not quite, let me rephrase") and moves on regardless of quality. No verdict, no "solid/partial/missing", no seeds withheld for wrong answers.
+    5. After all concepts: a 3-question recap — plain "what does X mean?" questions, player types short answers, tutor scores pass/fail conversationally. Seeds awarded for participation (1 seed per concept covered, regardless of answers).
+    6. Closing summary: tutor gives a one-paragraph recap of everything covered, highlights the 1–2 things most worth remembering.
+  - Tutor: same persona system as encounters (Hale, Okafor, Chen). Uses Claude when available; offline fallback uses curriculum data to construct a readable summary without AI. Prompts should be lighter/cheaper than encounter prompts — no evaluation rubric, just explanation and gentle checking.
+  - Progress: Study Hall sessions do not change `explored`/`consolidated` status. They do log any concepts the player clearly couldn't articulate (tutor feedback was corrective) as soft gaps — visible in the journal as "worth revisiting" but not penalising stats.
+  - Offline: if vault note is unavailable, tutor works from curriculum data only (`keyConcepts`, `keyCases`, `statutes`) — a shorter but functional session. If Claude is unavailable, pre-written summaries from curriculum data are shown with the offline tutor persona.
+  - Tests: session flow advances through each concept in order; recap fires after last concept; seeds awarded correctly; gaps logged only when tutor gave corrective feedback; offline path works without a vault fetch or Claude call; subsection picker lists all subsections for the district.
+  - Done when: `npm run build` and `npm test` pass; entering the Study Hall in the Public Law district, picking "Ch4: Parliamentary Sovereignty", runs a full guided session with tutor explanation of each key concept, gentle checking, and a closing recap — all without IRAC or a verdict.
+- [ ] **T92 — Keep the map in step with the vault (live heading check and new-note districts)**
+  - Why: the curriculum is a static snapshot. VISION §2/§5 say new notes add new buildings and the game reads notes live. Today a renamed heading silently makes the tutor receive the whole note. Several vault notes have no district at all (for example `LAW7054-Contract-Week3-Consideration-Estoppel.md`, `LAW7054-Tort-W2-Duty-of-Care-Psychiatric-Injury.md`, `LAW7055-Parliamentary-Sovereignty-Notes.md`), so they are invisible to the player.
+  - Pure logic in `src/logic/vaultSync.js`: `parseHeadings(markdown)` returns `##` and `###` headings (ignoring `#` lines inside code fences). `diffAgainstCurriculum(curriculum, vaultFiles, headingsByFile)` returns `{ missingFiles, missingHeadings, unmappedNotes }`. `districtFromNote(file, headings)` builds a district with `makeDistrict`. Region comes from the `LAW7053/7054/7055` prefix and `Tort`/`Contract` in the name. Subsections are parallel entries (`pre: []`) and the district is marked `source: 'vault-live'`. Cheat sheets, indexes, `TUTOR-SESSION-*` and already-mapped notes are excluded. Notes whose region can't be guessed are reported, not placed.
+  - Browser glue in `src/api/vaultSync.js`: only if an Obsidian token is set, `listFiles()` plus `readNote` of each mapped note (batched, failures ignored) produces the diff at most once a day, cached in settings (never in the save). Offline or unreachable means the static map is used and nothing breaks.
+  - Surface it: Settings gets a "Check vault against the map" button with a readable report (headings that moved, notes with no building). The door panel says "this note's heading changed: the tutor is using the whole note" instead of failing silently. New-note districts are merged into the curriculum when the scene is created, so `buildWorld` places them.
+  - Hard rules: read-only on the vault; no note prose in the repo or cache (headings and filenames only); no study-note writes.
+  - Tests: heading parsing (code fences, trailing hashes), the diff, region guessing, exclusion rules, the merged curriculum keeps unique ids, valid prerequisites and no cycles, and `buildWorld` stays collision-free and reachable with generated districts.
+  - Done when: `npm run build` and `npm test` pass; with a stubbed vault listing containing one extra `LAW7054-` note, a new building appears in the Contract region; renaming a mapped heading in the stub gives a clear warning rather than silent whole-note context.
+
+- [ ] **T91 — Extra depth layer in encounters (VISION §1, "stages may loop")**
+  - Why: every encounter is the same flat 2→3→4→5 path, even where the note has real depth. VISION §1 says the tutor adds an extra layer when the note has more (Consideration → part payment → *Pinnel's Case* → *Foakes v Beer* → promissory estoppel). Neither provider does this, so a building like "Alteration Promises" teaches no more than a one-case building.
+  - Rule (pure, in `src/logic/encounterRules.js`): a subsection qualifies for a **layer** when it has 3 or more `keyCases`, or 4 or more `keyConcepts`. The layer is one extra typed question after stage 4 (Authority) and before stage 5. It asks the player to connect two authorities (how does the second qualify, overrule or build on the first?) or to take the rule to its limit. It is not a new numbered stage: the pips stay 1–7 and the consolidation rule is unchanged. It counts as an exchange, and can have follow-ups, hints and "I'm not sure" like any open stage. A `missing` layer answer logs gaps but cannot by itself block consolidation.
+  - Claude tutor (`src/api/tutor.js`, `src/logic/tutorPrompts.js`): add `layerPrompt`. It names two cases or concepts taken only from the live note section and the KEY CASES list, never invents authority, and asks for the link between them. Evaluate with the existing evaluation prompt and answer fencing.
+  - Offline: an optional `layer` entry on a bank subsection (prompt, model answer, hints, concept regexes). Write one for the Offer & Acceptance Framework and one for Assault. A bank without a `layer` skips it.
+  - Session note: `Covered` lists the layer line and its gaps appear under `Gaps`.
+  - Tests: a qualifying subsection gets exactly one layer question and a non-qualifying one gets none; a layer cannot be skipped; a `missing` layer answer cannot consolidate by itself but does not block consolidation when stages 3 and 5 are solid; hints do not leak the model answer; layer gaps reach the session note.
+  - Done when: `npm run build` and `npm test` pass; an offline encounter on a layered building shows one extra "going deeper" question between Authority and Application; Claude mode asks a layer question that cites only cases named in the note.
+  - Related, not in this task: VISION §1.3 wants old gaps to resurface at the start of the next encounter. Today the intro only mentions them. A later task could open with one typed recall question on the top open gap.
+
+- [ ] **T93 — Make consolidation feel like an event (result card and brazier moment)**
+  - Why: the verdict is a block of plain transcript text and the world barely reacts, so earning "consolidated" doesn't feel like it changed anything. This is feel and visual work, below T91 and T92. The Phaser parts have not been seen in a browser, so check them by eye in a dev run.
+  - Result card: when the verdict arrives, show a card in the encounter panel. It has one chip per stage (Plain English, Precision, Authority, Application, Checkpoint) coloured solid, partial or missing, the IRAC score 0–4 under Application, the seeds earned and stat gains, and the gaps as a "revisit" list. It is built by a pure `resultCardModel(result, rewards)` in `src/logic/encounterView.js`. The DOM only renders it. It is a display of the verdict, not a click-through that replaces any question.
+  - World reaction: after a `consolidated` close, the camera eases to the building, the door recolours with a short pulse, and if that completes the district the brazier lights with the existing glow plus the fanfare. Then the camera returns to the player. Input stays locked only for that short pan (under 2 s), and the overlay lock must not leak.
+  - Explored outcome gets a gentler version: explored tint, no fanfare, and the card says plainly what must come out solid to consolidate.
+  - Tests: `resultCardModel` for consolidated, explored and left-early results (no stage reported as answered that wasn't); reward lines match the real rewards; the card never shows a verdict the engine did not give.
+  - Done when: `npm run build` and `npm test` pass; finishing an encounter in a dev run shows the chips and rewards, and a consolidated building visibly pulses and lights its brazier (if the district is complete) on return to the world.
+
