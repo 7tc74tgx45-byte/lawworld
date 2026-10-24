@@ -26,6 +26,7 @@ export const CELL_GAP = 4;
 export const PLAZA_W = 11;
 export const PLAZA_H = 7;
 export const PLAZA_BAND = PLAZA_H + 2;
+export const GARDEN_PLOTS = 6;
 
 const hash = (x, y) => (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
 
@@ -80,6 +81,7 @@ export function buildWorld(curriculum) {
   const districts = [];
   const buildings = [];
   let spawn = null;
+  let garden = { plots: [] };
 
   curRegions.forEach((cr, i) => {
     const L = locals[i];
@@ -105,6 +107,8 @@ export function buildWorld(curriculum) {
       const fx = rx + p.x + Math.floor(p.w / 2) - 1;
       const fy = ry + p.y + 1;
       for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) set(fx + x, fy + y, TILE.WATER); // fountain
+        // Knowledge garden (T13): six walkable plots in a row below the fountain (never blocking).
+        garden = { plots: Array.from({ length: GARDEN_PLOTS }, (_, k) => ({ id: `plot-${k}`, tx: rx + p.x + k * 2, ty: ry + p.y + 3 })) };
       spawn = { tx: rx + p.x + Math.floor(p.w / 2), ty: ry + p.y + 5 };
     }
     L.cells.forEach((cell, k) => {
@@ -165,5 +169,5 @@ export function buildWorld(curriculum) {
     }
   }
 
-  return { cols, rows, tiles, zones, regions, districts, buildings, spawn, corridors };
+  return { cols, rows, tiles, zones, regions, districts, buildings, spawn, corridors, garden };
 }

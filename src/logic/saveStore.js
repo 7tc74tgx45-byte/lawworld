@@ -10,6 +10,7 @@
 import { loadSave, createAutosaver, createFreshSave, writeSave, importSave, exportSave, clearSave, normaliseSave } from './save.js';
 import { applyEncounterResult } from './progress.js';
 import { recordSession } from './sessionLog.js';
+import { seedsFromResult } from './garden.js';
 
 export function createSaveStore({ storage, timers, now, delayMs, onChange, onSaved } = {}) {
   const loaded = loadSave(storage, { now: now?.() });
@@ -40,7 +41,8 @@ export function createSaveStore({ storage, timers, now, delayMs, onChange, onSav
     applyEncounter(result, { subsection } = {}) {
       const progress = applyEncounterResult(state.progress, result, { subsection, now: now?.() });
       if (progress === state.progress) return false; // nothing answered: nothing changes
-      commit({ ...state, progress, sessions: recordSession(state.sessions ?? [], result, { subsection, outcome: progress.subsections[result.subsectionId]?.lastOutcome ?? 'explored', now: now?.() }) }, { immediate: true }); // a finished encounter is worth saving right away
+      const seeds = (state.inventory?.seeds ?? 0) + seedsFromResult(result); // T13: a seed per solid answered stage
+        commit({ ...state, inventory: { ...state.inventory, seeds }, progress, sessions: recordSession(state.sessions ?? [], result, { subsection, outcome: progress.subsections[result.subsectionId]?.lastOutcome ?? 'explored', now: now?.() }) }, { immediate: true }); // a finished encounter is worth saving right away
       return true;
     },
     importText(text) {

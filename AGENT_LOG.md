@@ -744,3 +744,14 @@ Cost $1.76 · 7 min · attempt 2
 3. Extend offline banks to Public Law and Foundations so those regions get clients offline.
 4. Use the materials: buy extra hints or light braziers (T13).
 5. Optionally write client cases into a TUTOR-SESSION note.
+
+## T13 — partial — 2026-10-24 04:13:08
+Cost $3.05 · 28 min · attempt 1
+
+**What changed:** Stopped at a limit before finish_task.
+
+**Try it:** —
+
+**Design notes:** —
+
+**Next:** Continue this task.
