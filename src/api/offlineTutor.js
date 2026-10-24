@@ -1,7 +1,7 @@
 // Offline tutor: implements the encounter-engine tutor interface from the built-in bank.
 // Evaluation is keyword + concept overlap (see src/logic/keywordEval.js). Clearly labelled offline.
 
-import { OFFLINE_BANK } from '../data/offlineBank.js';
+import { OFFLINE_BANK, hasOfflineBank } from '../data/offlineBank.js';
 import { CASES, SHORT } from '../data/offlineCases.js';
 import { normalise } from '../logic/keywordEval.js';
 
@@ -9,10 +9,25 @@ export const TUTORS = {
   hale: { id: 'hale', name: 'Professor Hale', colour: '#c9a227', style: 'Socratic' },
 };
 
+export class NoOfflineBankError extends Error {
+  constructor(id) {
+    super(`The offline question bank does not cover "${id}" yet. Connect Claude and Obsidian to play this building.`);
+    this.name = 'NoOfflineBankError';
+    this.subsectionId = id;
+  }
+}
+
 function bankFor(subsection) {
-  const b = OFFLINE_BANK[subsection.id];
-  if (!b) throw new Error(`No offline bank for subsection "${subsection.id}".`);
+  const b = hasOfflineBank(subsection.id) ? OFFLINE_BANK[subsection.id] : null;
+  if (!b) throw new NoOfflineBankError(subsection.id);
   return b;
+}
+
+/** First open gap concepts, phrased for the intro. */
+function gapLine(priorGaps) {
+  const concepts = [...new Set((priorGaps ?? []).filter((g) => !g.resolved).map((g) => g.concept).filter(Boolean))].slice(0, 2);
+  if (!concepts.length) return '';
+  return ` Last time this didn't fully land: ${concepts.join('; ')}. Keep it in mind as we go.`;
 }
 
 const NOTE_QA = [
@@ -39,7 +54,7 @@ export function createOfflineTutor(opts = {}) {
         const q = bank[6].questions[ctx.mcqIndex];
         return { text: `Question ${ctx.mcqIndex + 1} of ${bank[6].questions.length}: ${q.text}`, options: q.options };
       }
-      return { text: bank[stage].prompt, modelAnswer: bank[stage].modelAnswer }; // modelAnswer stays inside the engine (hint leak check)
+      return { text: bank[stage].prompt + (stage === 1 ? gapLine(ctx.priorGaps) : ''), modelAnswer: bank[stage].modelAnswer }; // modelAnswer stays inside the engine (hint leak check)
     },
 
     evaluate(stage, prompt, answer, ctx) {
@@ -82,13 +97,21 @@ export function createOfflineTutor(opts = {}) {
       };
     },
 
-    answerQuestion(question) {
+    answerQuestion(question, ctx) {
       const q = normalise(question);
-      const hit = NOTE_QA.find((e) => e.rx.some((r) => new RegExp(r, 'i').test(q)));
-      if (hit) return { text: hit.text, external: false };
-      for (const [k, c] of Object.entries(CASES)) {
-        if (c.nameRx.some((r) => new RegExp(r, 'i').test(q))) {
-          return { text: `${c.name}. ${c.facts} Held: ${c.ratio}`, external: false, short: SHORT[k] };
+      const id = ctx?.subsection?.id;
+      const own = id && hasOfflineBank(id) ? OFFLINE_BANK[id].qa ?? [] : [];
+      const ownHit = own.find((e) => e.rx.some((r) => new RegExp(r, 'i').test(q)));
+      if (ownHit) return { text: ownHit.text, external: false };
+      // The contract formation answers and case notes apply to the demo and to contract subsections only.
+      const contractish = !id || id === 'contract-offer-acceptance' || id.startsWith('contract');
+      if (contractish) {
+        const hit = NOTE_QA.find((e) => e.rx.some((r) => new RegExp(r, 'i').test(q)));
+        if (hit) return { text: hit.text, external: false };
+        for (const [k, c] of Object.entries(CASES)) {
+          if (c.nameRx.some((r) => new RegExp(r, 'i').test(q))) {
+            return { text: `${c.name}. ${c.facts} Held: ${c.ratio}`, external: false, short: SHORT[k] };
+          }
         }
       }
       return {

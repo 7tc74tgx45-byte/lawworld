@@ -6,6 +6,9 @@
 import { CASES } from './offlineCases.js';
 import { evaluateByConcepts, iracScore } from '../logic/keywordEval.js';
 import { MCQ_QUESTIONS } from './offlineMcq.js';
+import { contractIntroBank } from './bank/contractIntro.js';
+import { contractAgreementBank } from './bank/contractAgreement.js';
+import { tortBank } from './bank/tortAssault.js';
 
 const caseInfo = (...keys) => keys.map((k) => ({ name: CASES[k].name, ratio: CASES[k].ratio, whyItMatters: CASES[k].whyItMatters }));
 const caseConcept = (key, label, extraRx = []) => ({
@@ -178,4 +181,10 @@ const stage7 = {
 
 export const OFFLINE_BANK = {
   'contract-offer-acceptance': { 1: stage1, 2: stage2, 3: stage3, 4: stage4, 5: stage5, 6: stage6, 7: stage7 },
+  // Curriculum subsections (T06): first three Contract subsections and the first Tort subsection.
+  'contract-intro.what-is-contract': contractIntroBank,
+  ...contractAgreementBank,
+  ...tortBank,
 };
+
+export const hasOfflineBank = (id) => Object.prototype.hasOwnProperty.call(OFFLINE_BANK, id);

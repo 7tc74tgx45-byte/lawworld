@@ -322,3 +322,45 @@ New `tests/encounterEngine.test.js` (27 tests, mock tutor). It covers:
 - **Not done:** `priorGaps` is only passed through. Nothing in the offline tutor uses it yet, and the intro doesn't mention it. That belongs to T06 and T08.
 
 **Next:** T06: the Claude tutor should use `ctx.priorGaps`, return `modelAnswer` from `generate`, and keep `evaluate` returning the same shape. T07: show a retry button when `engine.submit` throws. The engine now leaves the exchange uncounted, so the same answer can be resent.
+
+## T06 — partial — 2026-10-24 01:51:01
+Cost $2.22 · 17 min · attempt 1
+
+**What changed:** The Claude tutor provider, the three personas and four new offline banks are written. `npm run build` and `npm test` pass (126 tests). I have not run the Claude tutor against the real API, and the new banks are not playable yet because nothing in the game uses them.
+
+**What's in:**
+- `src/logic/notes.js` has `extractSection(markdown, heading)`. It includes nested sub-headings and stops at the next heading of the same or higher level. Matching ignores `#`, bold, case and trailing colons, and it skips headings inside code fences. The file also has `listHeadings` and `sessionFilesFor`.
+- `src/logic/tutorJson.js` parses replies defensively: it strips code fences, finds the first JSON object, and fixes trailing commas. If that fails it retries once with a repair prompt, then throws a readable error. Evaluations with an unknown verdict or empty feedback are rejected, which triggers the retry. Checkpoint questions must have exactly 3 options and a valid correct index.
+- `src/data/tutors.js` has Hale, Okafor and Chen, each with a style prompt and voice examples. A shared rules block tells the tutor never to invent citations, to say when the note is silent, to give hints that nudge, and to state that the Occupiers' Liability Act 1984 exists.
+- `src/logic/tutorPrompts.js` builds the prompts for the intro, stages 2–5, the MCQ set, evaluation, hints, "I'm not sure" and questions.
+- `src/api/tutor.js` implements the tutor interface with Claude:
+  - It reads the note section live via Obsidian. If the heading isn't found, it falls back to the whole note.
+  - It adds the Gaps and Next-time digests from up to 2 prior `TUTOR-SESSION-*` notes for the subsection, plus open gaps.
+  - It returns `modelAnswer` from `generate`, so the engine's hint-leak check works.
+  - The 3 checkpoint questions are generated once per subsection, and MCQ marking happens locally.
+  - `answerQuestion` asks from the note first. Only if the note lacks the answer does it call web search (`web_search_20250305`, max_uses 3). That answer comes back as `external: true`, which the engine labels "External, not from your notes".
+  - If the note can't be read, the call throws, so the engine doesn't count the exchange.
+- Offline banks are in `src/data/bank/`, each with 7 stages, 2 hints per stage, 3 MCQs and offline Q&A. They are:
+  - `contract-intro.what-is-contract`
+  - `contract-agreement.objective-approach`
+  - `contract-agreement.offer-and-acceptance`
+  - `tort-trespass.assault`
+- `OFFLINE_BANK` now includes these banks. The offline tutor also gives a clear `NoOfflineBankError` for subsections with no bank, mentions open gaps in the intro, and no longer returns the contract-formation canned answers on non-contract subsections.
+- Tests are in `tests/tutorT06.test.js`. They cover `extractSection`, JSON parsing and repair, offline verdicts (including that stage 5 needs IRAC structure for "solid"), the Claude tutor against a stubbed API (context, one repair retry, external web answers), and the banks' structure.
+
+**Try it:** Nothing new is visible in the browser yet. The demo encounter behaves as before. Run `npm test` to see the new tests. To try the Claude tutor in the console, build `createClaudeTutor({ personaId: 'okafor' })` and call `generate`/`evaluate` with a curriculum subsection. That needs a Claude key and the Obsidian token in Settings or `.env`, and the Obsidian cert accepted.
+
+**Design notes:** - **Banks are not playable yet.** The bank is keyed by curriculum id and the Contract Law rectangle still uses the demo subsection. T07/T09 need to pass `findSubsection(curriculum, id)` to the offline tutor. Also, `createOfflineTutor()` only supports Professor Hale, so the persona is not chosen per subsection. Tutor switching is not wired anywhere yet.
+- **The Claude tutor is not wired into the UI.** Nothing calls `createClaudeTutor` or falls back to offline when Claude or Obsidian is down. That is T07's "continue offline" work. Remember `main.js` or the scene needs to pick Claude only when a key is set.
+- **The Claude tutor is untested against the live API.** Prompts and JSON handling were only tested with a stubbed `call`. Expect to tune the prompt wording after a first real session.
+- **Case law outside the vault.**
+  - The Ch1 note names no cases, so its stage 4 uses Balfour v Balfour, Carlill and Currie v Misa. The prompt says the note names none.
+  - For the assault bank, the handout only lists case names. I wrote short summaries of Stephens v Myers, Tuberville v Savage, Read v Coker and R v Ireland from standard law.
+  - **Please check these against your reading before relying on them.**
+  - Thomas v NUM is deliberately not summarised, and the offline tutor says the vault is silent on it.
+  - Chwee Kin Keong is flagged as a Singapore authority (persuasive only in England).
+- **Offline evaluation is keyword-based.** It rewards keyword overlap and can miss correct answers in unusual wording. It is labelled offline and is a fallback only.
+- **`offlineBank.js` is now about 190 lines**, with the new banks in separate files. The old demo bank and its keyword helpers were left as they were.
+- **Not done:** I haven't added `priorGaps` to the Claude intro beyond passing them into the context. Prior-session memory reads Gaps and Next-time headings, which T08 must write under exactly those headings.
+
+**Next:** T07: choose Claude or offline when the encounter opens, pass real curriculum subsections and the persona, add retry and "continue offline" on tutor errors, and show a clear message when a subsection has no offline bank. T08: write session notes with `## Gaps` and `## Next time` headings, which `sessionDigest` reads. Later: add offline banks for more subsections, and check the new case summaries against the vault reading.
