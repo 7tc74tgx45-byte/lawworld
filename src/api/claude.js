@@ -7,7 +7,7 @@ import { getSetting, getStoredSetting } from '../settings.js';
 import { describeError } from '../logic/apiErrors.js';
 
 export const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
-export const DEFAULT_MODEL = 'claude-haiku-5-5';
+export const DEFAULT_MODEL = 'claude-3-5-haiku-20241022';
 
 /** Resolve the API key: Settings first, then .env only when running the dev server. */
 export function getClaudeKey() {
