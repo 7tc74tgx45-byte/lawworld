@@ -26,7 +26,7 @@ export const CELL_GAP = 4;
 export const PLAZA_W = 11;
 export const PLAZA_H = 7;
 export const PLAZA_BAND = PLAZA_H + 2;
-export const GARDEN_PLOTS = 6;
+export const GARDEN_PLOTS = 40; // max; actual active count comes from activePlotCount(save) at runtime
 
 const hash = (x, y) => (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
 
@@ -108,7 +108,11 @@ export function buildWorld(curriculum) {
       const fy = ry + p.y + 1;
       for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) set(fx + x, fy + y, TILE.WATER); // fountain
         // Knowledge garden (T13): six walkable plots in a row below the fountain (never blocking).
-        garden = { plots: Array.from({ length: GARDEN_PLOTS }, (_, k) => ({ id: `plot-${k}`, tx: rx + p.x + k * 2, ty: ry + p.y + 3 })) };
+        garden = { plots: Array.from({ length: GARDEN_PLOTS }, (_, k) => {
+          const col = k % 4;
+          const row = Math.floor(k / 4);
+          return { id: `plot-${k}`, tx: rx + p.x + col * 2, ty: ry + p.y + 3 + row * 2 };
+        }) };
       spawn = { tx: rx + p.x + Math.floor(p.w / 2), ty: ry + p.y + 5 };
     }
     L.cells.forEach((cell, k) => {

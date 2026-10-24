@@ -19,8 +19,18 @@ export const WITHER_DAYS = 3;
 export const DAMP_MS = 10 * 60 * 1000;
 export const MAX_STAGE = 4; // 0 seed, 1 sprout, 2 sapling, 3 young tree, 4 tree
 export const STAGE_NAMES = ['seed', 'sprout', 'sapling', 'young tree', 'tree'];
-export const PLOT_COUNT = 6;
+export const PLOT_COUNT_BASE = 12;   // plots available from the very first session
+export const PLOTS_PER_UNLOCK = 4;   // additional plots per 2 consolidated subsections
+export const PLOT_COUNT_MAX = 40;    // hard ceiling
 export const plotIdFor = (i) => `plot-${i}`;
+
+/** How many plots are active given the current save (scales with consolidations). */
+export function activePlotCount(save) {
+  const subs = save?.progress?.subsections ?? {};
+  const consolidated = Object.values(subs).filter(s => s.status === 'consolidated').length;
+  const bonus = Math.floor(consolidated / 2) * PLOTS_PER_UNLOCK;
+  return Math.min(PLOT_COUNT_MAX, PLOT_COUNT_BASE + bonus);
+}
 
 const ms = (t) => (t === undefined ? Date.now() : new Date(t).getTime());
 const iso = (t) => new Date(ms(t)).toISOString();
@@ -112,7 +122,7 @@ export function retrievalTargets(curriculum, progress, plots = []) {
 export function plantSeed(save, plotId, { subsectionId, concept }, now) {
   const plots = gardenOf(save);
   const n = Number(String(plotId).replace('plot-', ''));
-  if (!Number.isInteger(n) || n < 0 || n >= PLOT_COUNT) return { ok: false, reason: 'no-such-plot', save };
+  if (!Number.isInteger(n) || n < 0 || n >= PLOT_COUNT_MAX) return { ok: false, reason: 'no-such-plot', save };
   if (plots.some((p) => p.id === plotId)) return { ok: false, reason: 'plot-taken', save };
   if (!(save.inventory?.seeds > 0)) return { ok: false, reason: 'no-seed', save };
   if (!subsectionId || !conceptKey(concept)) return { ok: false, reason: 'no-concept', save };
@@ -169,7 +179,7 @@ export function syncBraziers(save, districts, states) {
 /** Everything the garden scene draws: one entry per plot slot. */
 export function gardenView(save, now) {
   const plots = gardenOf(save);
-  return Array.from({ length: PLOT_COUNT }, (_, i) => {
+  return Array.from({ length: activePlotCount(save) }, (_, i) => {
     const plot = plots.find((p) => p.id === plotIdFor(i));
     if (!plot) return { id: plotIdFor(i), empty: true };
     return { ...plot, empty: false, status: plotStatus(plot, now), stageName: STAGE_NAMES[plot.stage] ?? 'tree', days: daysSinceWatered(plot, now), damp: dampRemainingMs(plot, now) > 0, thirsty: needsWater(plot, now) };

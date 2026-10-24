@@ -1,6 +1,6 @@
 // The knowledge garden in the hub (T13): six soil plots drawn from the save. Rules live in src/logic/garden.js;
 // this file only owns the sprites and the "which plot is the player next to" query.
-import { gardenView, plotIdFor, PLOT_COUNT } from '../logic/garden.js';
+import { gardenView, plotIdFor, PLOT_COUNT_MAX, activePlotCount } from '../logic/garden.js';
 import { TILE_SIZE, tileCentre } from '../logic/worldQuery.js';
 import { makeGardenTextures, plantKey } from './gardenDraw.js';
 
@@ -9,18 +9,29 @@ export const PLOT_REACH = TILE_SIZE * 1.1;
 export default class Garden {
   constructor(scene, world) {
     this.scene = scene;
-    this.plots = world.garden?.plots ?? [];
+    this.allPlots = world.garden?.plots ?? []; // all 40 physical slots
+    this.plots = [];                            // active subset (set on first refresh)
     makeGardenTextures(scene);
-    this.sprites = this.plots.map((p) => scene.add.image(p.tx * TILE_SIZE, p.ty * TILE_SIZE, 'plot-empty').setOrigin(0).setDepth(p.ty * TILE_SIZE + 8));
-    this.keys = this.plots.map(() => 'plot-empty');
+    // Pre-create sprites for all slots; hide inactive ones
+    this._allSprites = this.allPlots.map((p) => scene.add.image(p.tx * TILE_SIZE, p.ty * TILE_SIZE, 'plot-empty').setOrigin(0).setDepth(p.ty * TILE_SIZE + 8).setVisible(false));
+    this._allIcons   = this.allPlots.map((p) => scene.add.image(p.tx * TILE_SIZE + TILE_SIZE / 2, p.ty * TILE_SIZE - 6, 'needs-water').setOrigin(0.5, 1).setDepth(p.ty * TILE_SIZE + 40).setVisible(false));
+    this.bob = scene.tweens?.add({ targets: this._allIcons, y: '-=3', duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.sprites = [];
+    this.icons = [];
+    this.keys = [];
     this.view = [];
-    // "Needs water" droplet over each thirsty plot; it bobs gently so it catches the eye.
-    this.icons = this.plots.map((p) => scene.add.image(p.tx * TILE_SIZE + TILE_SIZE / 2, p.ty * TILE_SIZE - 6, 'needs-water').setOrigin(0.5, 1).setDepth(p.ty * TILE_SIZE + 40).setVisible(false));
-    this.bob = scene.tweens?.add({ targets: this.icons, y: '-=3', duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   }
 
   /** Redraw from the save (call after planting/watering and every so often, since plants wither with time). */
   refresh(save, now = Date.now()) {
+    const active = activePlotCount(save);
+    // Show/hide physical slots based on active count
+    this._allSprites.forEach((s, i) => s.setVisible(i < active));
+    this._allIcons.forEach((s, i) => { if (i >= active) s.setVisible(false); });
+    this.plots   = this.allPlots.slice(0, active);
+    this.sprites = this._allSprites.slice(0, active);
+    this.icons   = this._allIcons.slice(0, active);
+    this.keys    = this.keys.length === active ? this.keys : Array(active).fill('plot-empty');
     this.view = gardenView(save, now);
     this.plots.forEach((p, i) => {
       const v = this.view[i];
@@ -45,5 +56,5 @@ export default class Garden {
     return best;
   }
 
-  get count() { return Math.min(PLOT_COUNT, this.plots.length); }
+  get count() { return this.plots.length; }
 }
