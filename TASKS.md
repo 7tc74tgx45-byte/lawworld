@@ -59,7 +59,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Versioned schema (`version: 1`) covering everything in VISION §7; `migrate()`; storage injected so it's testable; debounced autosave; export/import JSON (file input + download link).
   - Tests with an in-memory storage: round-trip, corrupted save falls back to a fresh game without throwing, migration hook runs.
 
-- [ ] **T05 — Encounter engine** (`src/logic/encounter.js`)
+- [x] **T05 — Encounter engine** (`src/logic/encounter.js`)
   - Provider-agnostic state machine for the stages in VISION §1. API: `createEncounter({subsection, tutor, priorGaps})`, `next()` returns the current prompt object, `submit(answer)`, `hint()`, `notSure()`, `ask(question)`, `leave()`, `result()`.
   - Open answers under 15 characters are rejected with a gentle message (not counted as an exchange). MCQ answers must be one of the options.
   - Follow-ups (max 2 per stage) when the evaluator says `partial`/`missing`. Minimum 8 exchanges before a verdict. Consolidation rule exactly as VISION §1.

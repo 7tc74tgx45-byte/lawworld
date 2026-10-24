@@ -48,7 +48,43 @@ export function computeOutcome({ stages, checkpoint }) {
   return 'consolidated';
 }
 
-export function createEncounter(subsection, tutor) {
+/** Make a tutor's evaluation safe for the engine: unknown verdicts count as partial, lists are arrays. */
+export function normaliseEvaluation(ev) {
+  const e = ev && typeof ev === 'object' ? { ...ev } : {};
+  if (!(e.verdict in RANK)) e.verdict = 'partial';
+  e.feedback = typeof e.feedback === 'string' ? e.feedback : '';
+  e.conceptsHit = Array.isArray(e.conceptsHit) ? e.conceptsHit.filter(Boolean) : [];
+  e.conceptsMissed = Array.isArray(e.conceptsMissed) ? e.conceptsMissed.filter(Boolean) : [];
+  if (e.iracScore != null) e.iracScore = Number.isFinite(+e.iracScore) ? +e.iracScore : undefined;
+  return e;
+}
+
+const words = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9£ ]+/g, ' ').split(/\s+/).filter(Boolean);
+
+/** True if `text` repeats a run of `run` consecutive words from the secret answer. */
+export function leaksAnswer(text, secret, run = 8) {
+  const w = words(secret);
+  if (w.length < run) return false;
+  const hay = ' ' + words(text).join(' ') + ' ';
+  for (let i = 0; i + run <= w.length; i++) {
+    if (hay.includes(' ' + w.slice(i, i + run).join(' ') + ' ')) return true;
+  }
+  return false;
+}
+
+/**
+ * createEncounter({ subsection, tutor, priorGaps }) -> engine.
+ * priorGaps: open gap records for this subsection (shown to the tutor as context; never to the player here).
+ * The legacy positional form createEncounter(subsection, tutor) is still accepted.
+ */
+export function createEncounter(arg, legacyTutor) {
+  const opts = legacyTutor ? { subsection: arg, tutor: legacyTutor } : arg ?? {};
+  const { subsection, tutor } = opts;
+  const priorGaps = Array.isArray(opts.priorGaps) ? opts.priorGaps.map((g) => ({ ...g })) : [];
+  if (!subsection || !tutor) throw new Error('createEncounter needs { subsection, tutor }.');
+  // Answer keys from the tutor's generate() stay here, so hints can be checked against them.
+  let secret = '';
+  let busy = false;
   const state = {
     stage: 1,
     current: null,
@@ -89,8 +125,13 @@ export function createEncounter(subsection, tutor) {
       followUpsUsed: st ? st.followUps : 0,
       notSure: st ? st.notSure : false,
       mcqIndex: state.mcq.index,
+      priorGaps: priorGaps.map((g) => ({ ...g })),
+      exchanges: state.exchanges,
       ...extra,
     };
+  }
+  function addGaps(concepts, stage, verdict) {
+    for (const c of concepts ?? []) addGap(c, stage, verdict);
   }
   function addGap(concept, stage, verdict) {
     if (!concept) return;
@@ -108,6 +149,7 @@ export function createEncounter(subsection, tutor) {
   async function openPrompt(stage) {
     state.stage = stage;
     const p = await tutor.generate(stage, ctx());
+    secret = typeof p.modelAnswer === 'string' ? p.modelAnswer : '';
     state.current = publicPrompt(p, stage, stage === 6 ? { mcqIndex: state.mcq.index, mcqTotal: CHECKPOINT_QUESTIONS } : {});
     return [say('tutor', p.text, { kind: state.current.kind })];
   }
@@ -155,7 +197,7 @@ export function createEncounter(subsection, tutor) {
     const s = state.stages[n];
     if (s.verdict && s.verdict !== 'solid') {
       const last = s.evaluations[s.evaluations.length - 1];
-      for (const c of last?.conceptsMissed ?? []) addGap(c, n, s.verdict);
+      addGaps(last?.conceptsMissed, n, s.verdict);
     }
   }
 
@@ -172,14 +214,14 @@ export function createEncounter(subsection, tutor) {
   async function submitMcq(answer) {
     const idx = parseMcq(answer, state.current);
     if (idx < 0) return reject('Please choose one of the options.');
+    const ev = normaliseEvaluation(await tutor.evaluate(6, state.current, idx, ctx()));
     state.exchanges++;
     const picked = state.current.options[idx];
     const msgs = [say('player', picked, { kind: 'mcq' })];
-    const ev = await tutor.evaluate(6, state.current, idx, ctx());
     const correct = ev.correct ?? ev.verdict === 'solid';
     state.mcq.answered++;
     if (correct) state.mcq.correct++;
-    else for (const c of ev.conceptsMissed ?? []) addGap(c, 6, 'missing');
+    else addGaps(ev.conceptsMissed, 6, 'missing');
     state.mcq.results.push({ correct, picked: idx, concepts: ev.conceptsHit ?? [] });
     msgs.push(say('tutor', ev.feedback, { kind: 'feedback', correct }));
     state.mcq.index++;
@@ -201,11 +243,12 @@ export function createEncounter(subsection, tutor) {
   async function submitOpen(answer) {
     const n = state.stage;
     const s = state.stages[n];
+    // Evaluate first: if the tutor call throws, nothing has been counted and the player can retry.
+    const ev = normaliseEvaluation(await tutor.evaluate(n, state.current, answer, ctx({ answers: [...s.answers, answer] })));
     state.exchanges++;
     s.answers.push(answer);
     s.answered = true;
     const msgs = [say('player', answer, { kind: 'open' })];
-    const ev = await tutor.evaluate(n, state.current, answer, ctx());
     // A taught-then-restated answer can earn at most "partial".
     if (s.notSure && ev.verdict === 'solid') ev.verdict = 'partial';
     s.evaluations.push(ev);
@@ -259,8 +302,13 @@ export function createEncounter(subsection, tutor) {
     if (holder.hints >= MAX_HINTS) {
       return out([say('tutor', 'That is all the nudges I can give without handing you the answer. Have a go, or tell me you are not sure and I will teach it.', { kind: 'hint' })]);
     }
-    const idx = holder.hints++;
-    const text = await tutor.hint(state.stage, cur, idx, ctx());
+    const idx = holder.hints;
+    let text = String(await tutor.hint(state.stage, cur, idx, ctx()) ?? '').trim();
+    holder.hints++;
+    // Safety net: a hint must nudge. If a provider echoes the model answer, replace it with a generic nudge.
+    if (!text || leaksAnswer(text, secret)) {
+      text = 'Think about which element or authority the question is really testing, and try to state it in your own words.';
+    }
     return out([say('tutor', `Hint: ${text}`, { kind: 'hint' })]);
   }
 
@@ -273,7 +321,7 @@ export function createEncounter(subsection, tutor) {
     const n = state.stage;
     const info = tutor.notSure ? await tutor.notSure(n, cur, ctx()) : { explanation: '', concepts: subsection.keyConcepts };
     const concepts = info.concepts?.length ? info.concepts : subsection.keyConcepts;
-    for (const c of concepts) addGap(c, n, 'missing');
+    addGaps(concepts, n, 'missing');
     const msgs = [say('player', "I'm not sure", { kind: 'notSure' })];
     if (n === 6) {
       state.mcq.answered++;
@@ -367,12 +415,24 @@ export function createEncounter(subsection, tutor) {
     return buildResult(state.done);
   }
 
+  // Serialise async calls: a double-click must not count one answer twice or skip a stage.
+  const guarded = (fn) => async (...args) => {
+    if (state.left) return reject('You have left this encounter.');
+    if (busy) return reject('One moment: the tutor is still thinking.');
+    busy = true;
+    try {
+      return await fn(...args);
+    } finally {
+      busy = false;
+    }
+  };
+
   return {
-    next,
-    submit,
-    hint,
-    notSure,
-    ask,
+    next: guarded(next),
+    submit: guarded(submit),
+    hint: guarded(hint),
+    notSure: guarded(notSure),
+    ask: guarded(ask),
     leave,
     result,
     status: () => ({ stage: state.stage, exchanges: state.exchanges, done: state.done, left: state.left, tutorName }),

@@ -284,3 +284,41 @@ Cost $0.51 · 3 min · attempt 1
 - **`GameScene` saves position by polling.** It checks every 2 seconds and only writes if the player moved. That is simple and cheap, and the worst case is losing about 2 seconds of walking on a crash.
 
 **Next:** T05 is already largely done in `encounter.js` from T00. A sensible check is to confirm it against the T05 spec, in particular the `createEncounter({subsection, tutor, priorGaps})` signature, which currently takes positional arguments. T07 should add Save, Export and Import buttons and a "start a new game" confirmation using `saveStore.reset()`.
+
+## T05 — done — 2026-10-24 01:34:19
+Cost $0.65 · 3 min · attempt 1
+
+**What changed:** The encounter engine from T00 already did most of T05. I checked it against the spec, brought it in line, and added a separate engine test file. `npm run build` and `npm test` both pass (112 tests).
+
+What changed in `src/logic/encounter.js`:
+- **New signature:** `createEncounter({ subsection, tutor, priorGaps })`. The old `createEncounter(subsection, tutor)` call still works, so the existing tests and UI keep running. `priorGaps` is passed to every tutor call as `ctx.priorGaps` (T06 and T08 will use it). `src/ui/encounter.js` now uses the new signature and takes an optional `priorGaps`.
+- **Failed tutor call:** the tutor now evaluates an answer before the engine counts it. If the call throws (network down, say), nothing is counted and the player can resend the same answer. Before, the exchange was counted and the stage was left half-done.
+- **Double-clicks:** `next`, `submit`, `hint`, `notSure` and `ask` now run one at a time. A second call while one is in flight gets a polite "tutor is still thinking" rejection. Before, a double-click could count one answer twice or skip a stage.
+- **Odd evaluations:** an unrecognised verdict is treated as `partial`. A missing `conceptsHit` or `conceptsMissed` becomes an empty list. It can never pass an answer by accident.
+- **Hint leaks:** if a tutor's generated prompt carries a `modelAnswer`, the engine keeps it privately. If a hint repeats 8 or more words in a row from it, the hint is replaced with a generic nudge. It matters most for the Claude tutor in T06. The model answer never appears in prompts or results. The offline tutor now passes its model answers in this way.
+- **After leaving:** once you call `leave()`, any further calls are rejected.
+
+The rules were already right and are now tested:
+- Open answers under 15 characters are rejected and not counted.
+- MCQ answers must be one of the options.
+- Hints are capped at 2 per stage.
+- Follow-ups are capped at 2 per stage.
+- There must be at least 8 exchanges before a verdict.
+- Consolidation follows VISION §1.
+
+New `tests/encounterEngine.test.js` (27 tests, mock tutor). It covers:
+- No verdict without answering; hints, questions and "not sure" never reach a verdict.
+- Short answers rejected; MCQ options enforced.
+- Hints never reveal the answer, including a deliberately leaky provider.
+- The follow-up cap.
+- Consolidated, explored (stage 3 or 5 partial, any of 2–5 missing, checkpoint 1/3), and gaps produced.
+- The minimum-exchange reflection, "not sure", external answers labelled, leaving mid-follow-up, concurrency, and a throwing tutor.
+
+**Try it:** Nothing new is visible in the browser. Run `npm run dev`, press E on the Contract Law rectangle and play the demo encounter. It should behave as before. Double-clicking Submit now counts once.
+
+**Design notes:** - **The minimum is tested here, but the offline bank needs checking.** An encounter with no follow-ups has 7 exchanges (4 open answers and 3 MCQs). The engine asks for a short reflection question to reach 8. It's counted as an exchange and not scored. I kept this rather than add a fifth scored stage. Real tutors may ask follow-ups naturally, in which case the reflection never appears.
+- **"I'm not sure" caps the stage at partial.** After the tutor teaches the idea and you restate it, the best you can get is `partial`. The stage is therefore never consolidated by being taught, and stage 3 or 5 cannot be solid after "I'm not sure". This follows VISION §1 point 4 and was already the case.
+- **Evaluation order:** `ask()` and `hint()` are rejected while another call is in flight. The UI already disables its buttons during a call, so this only matters for programmatic use.
+- **Not done:** `priorGaps` is only passed through. Nothing in the offline tutor uses it yet, and the intro doesn't mention it. That belongs to T06 and T08.
+
+**Next:** T06: the Claude tutor should use `ctx.priorGaps`, return `modelAnswer` from `generate`, and keep `evaluate` returning the same shape. T07: show a retry button when `engine.submit` throws. The engine now leaves the exchange uncounted, so the same answer can be resent.

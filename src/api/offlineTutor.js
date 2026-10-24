@@ -39,7 +39,7 @@ export function createOfflineTutor(opts = {}) {
         const q = bank[6].questions[ctx.mcqIndex];
         return { text: `Question ${ctx.mcqIndex + 1} of ${bank[6].questions.length}: ${q.text}`, options: q.options };
       }
-      return { text: bank[stage].prompt };
+      return { text: bank[stage].prompt, modelAnswer: bank[stage].modelAnswer }; // modelAnswer stays inside the engine (hint leak check)
     },
 
     evaluate(stage, prompt, answer, ctx) {
