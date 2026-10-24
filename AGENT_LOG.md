@@ -163,3 +163,14 @@ It has four modules, each with one region and a season: Foundations (spring), Co
 T06 needs offline bank entries keyed to the new ids: the first three Contract subsections (`contract-intro.what-is-contract`, `contract-agreement.objective-approach`, `contract-agreement.offer-and-acceptance` / `offer-vs-itt`) and the first Tort one (`tort-trespass.assault` or `tort-duty.introduction`).
 Decide whether to add Occupiers' Liability and Judicial Review notes to the vault and regenerate.
 If you want more depth, map the skipped workshop and lecture notes as extra subsections.
+
+## T02 — partial — 2026-10-24 01:11:20
+Cost $0.74 · 3 min · attempt 2
+
+**What changed:** Stopped at a limit before finish_task.
+
+**Try it:** —
+
+**Design notes:** —
+
+**Next:** Continue this task.
