@@ -13,6 +13,7 @@ export const tortDistricts = [
       ['battery', 'Battery', 'BATTERY', ['direct application of force', 'hostility and everyday contact'], ['Collins v Wilcock', 'Cole v Turner', 'Wilson v Pringle'], []],
       ['false-imprisonment', 'False Imprisonment', 'FALSE IMPRISONMENT', ['total restraint', 'knowledge of confinement', 'reasonable means of escape'], ['Bird v Jones', 'Meering v Grahame-White Aviation', 'Herd v Weardale Steel'], []],
       ['police-prison', 'Police and Prison Cases', 'POLICE AND PRISON CASES', ['lawful arrest', 'kettling', 'prisoners and residual liberty'], ['Austin v Metropolitan Police Commissioner', 'R (Lumba) v Home Secretary', 'Hague v Deputy Governor of Parkhurst Prison'], ['Police and Criminal Evidence Act 1984'], { pre: ['false-imprisonment'] }],
+      ['lecture-hall', 'Lecture Hall', 'Lecture Hall', [], [], [], { pre: [], type: 'lecture' }],
     ],
   }),
   D({

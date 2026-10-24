@@ -74,6 +74,7 @@ export const publicLawDistricts = [
       ['rol-and-sovereignty', 'Rule of Law and Parliamentary Supremacy', 'Rule of Law and Parliamentary Supremacy', ['tension between the two'], ['R (Unison) v Lord Chancellor', 'Jackson v AG'], [], { pre: ['bingham-rules', 'pl-sovereignty.limbs'] }],
       ['sop', 'Separation of Powers: Pure vs Partial', 'Part 2: Separation of Powers', ['ministers and Parliament', 'legislative and judicial powers of ministers', 'scrutiny'], ['R (Anderson) v SSHD'], ['House of Commons Disqualification Act 1975'], { pre: ['definition'] }],
       ['judicial-independence', 'Judicial Independence and CRA 2005', 'Judicial Independence', ['Parliament and the judges', 'CRA 2005'], ['Jackson v AG'], ['Constitutional Reform Act 2005'], { pre: ['sop'] }],
+      ['lecture-hall', 'Lecture Hall', 'Lecture Hall', [], [], [], { pre: [], type: 'lecture' }],
     ],
   }),
   D({

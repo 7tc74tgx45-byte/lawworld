@@ -160,3 +160,10 @@
 .lw-ws-input-row { display: flex; gap: 8px; padding: 0 16px 10px; align-items: flex-end; }
 .lw-ws-input-ta { flex: 1; background: #0f1320; color: #f0f2f8; border: 1px solid #3c4a73; border-radius: 6px; padding: 8px; font: 14px/1.4 system-ui, sans-serif; resize: none; min-height: 56px; }
 .lw-ws-input-ta:focus { outline: 2px solid #5a7bd8; }
+
+/* ── Lecture Hall panel ──────────────────────────────────────────────── T97 */
+.lw-panel.lecture { width: min(600px, 96vw); height: auto; max-height: 92vh; overflow-y: auto; }
+.lp-topic-list { display: flex; flex-direction: column; gap: 8px; margin: 12px 16px; }
+.lp-topic-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #0f1320; border: 1px solid #2d3a5a; border-radius: 8px; font-size: 14px; color: #d0d8f0; }
+.lp-topic-row strong { flex: 1; color: #e8ecf8; }
+.lp-topic-sub { color: #7a85a5; font-size: 13px; }

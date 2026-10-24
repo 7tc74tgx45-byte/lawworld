@@ -5,6 +5,7 @@ import { openSettings } from '../ui/settings.js';
 import { openDoorPanel } from '../ui/doorPanel.js';
 import { openWorkshopPanel } from '../ui/workshopPanel.js';
 import { openWorkshopEncounter } from '../ui/workshopEncounter.js';
+import { openLecturePanel } from '../ui/lecturePanel.js';
 import { parseWorkshopNote } from '../logic/workshopParser.js';
 import { openJournal } from '../ui/journal.js';
 import { downloadSave, pickAndImportSave, getSaveStore } from '../ui/saveAdapter.js';
@@ -37,6 +38,7 @@ import { music } from '../audio/music.js';
 import { sfx } from '../audio/sfx.js';
 import { createStepper, tickStepper, terrainAt, footstepName } from '../logic/sfx.js';
 import { getSetting } from '../settings.js';
+import { syncVault } from '../api/vaultSync.js';
 import { TransitionManager } from '../ui/transitions.js';
 
 const PLAYER_SPEED = 150;
@@ -47,11 +49,12 @@ export default class GameScene extends Phaser.Scene {
   }
 
   create() {
-    this.world = buildWorld(curriculum);
+    this.curriculum = curriculum; // may be replaced after vault sync
+    this.world = buildWorld(this.curriculum);
     const { world } = this;
     const mapW = world.cols * TILE_SIZE;
     const mapH = world.rows * TILE_SIZE;
-    this.districtList = allDistricts(curriculum);
+    this.districtList = allDistricts(this.curriculum);
 
     this.renderer = new WorldRenderer(this, world);
 
@@ -132,6 +135,20 @@ export default class GameScene extends Phaser.Scene {
       this.vaultNotes = new Set(files);
       this.refreshStates();
     }).catch(() => { /* vault offline — locked/available state falls back to prerequisite gating */ });
+    // Vault sync: merge any workshop/lecture notes in the vault that aren't in the static curriculum.
+    // Fires async so it never blocks the initial map load. Rebuilds the world if new districts appear.
+    syncVault(this.curriculum).then(({ curriculum: merged, report }) => {
+      if (report.added.length === 0) return; // nothing new — no data update needed
+      // Update the curriculum and district list used by game logic (state, journal, door panels).
+      // The visual world (WorldRenderer) is not rebuilt mid-session — new buildings appear on next load.
+      this.curriculum = merged;
+      this.districtList = allDistricts(merged);
+      this.refreshStates();
+      this.refreshClients();
+      console.info('[GameScene] Vault sync found new notes:', report.added);
+    }).catch((err) => {
+      console.warn('[GameScene] Vault sync error:', err);
+    });
     // Client NPCs (T12): one per region while something there is explored. A served client leaves for 5 minutes.
     this.clientNpcs = new ClientNpcs(this, world, { canServe: canServeClient });
     this.refreshClients();
@@ -180,7 +197,7 @@ export default class GameScene extends Phaser.Scene {
   /** Recompute building colours and braziers from progress. */
   refreshStates() {
     const progress = this.saveStore.state.progress;
-    this.states = computeStates(curriculum, progress, { vaultNotes: this.vaultNotes });
+    this.states = computeStates(this.curriculum, progress, { vaultNotes: this.vaultNotes });
     // Braziers stay lit once earned (saved), even if the vault later adds a building to the district.
     const synced = syncBraziers(this.saveStore.state, this.districtList, this.states);
     if (synced.newlyLit.length) {
@@ -210,7 +227,7 @@ export default class GameScene extends Phaser.Scene {
     const state = this.saveStore.state;
     openGarden({
       plotId,
-      curriculum,
+      curriculum: this.curriculum,
       getSave: () => this.saveStore.state,
       update: (fn) => this.updateGarden(fn),
       onDone: (msg) => this.showBanner(msg, 7000),
@@ -271,18 +288,18 @@ export default class GameScene extends Phaser.Scene {
 
   /** E at a door: locked shows the padlock tooltip; otherwise choose a tutor, then the encounter. */
   interactWithDoor(b) {
-    const sub = findSubsection(curriculum, b.id);
+    const sub = findSubsection(this.curriculum, b.id);
     if (!sub) return;
     const state = this.saveStore.state;
-    const info = describeDoor(curriculum, state.progress, b.id, {
+    const info = describeDoor(this.curriculum, state.progress, b.id, {
       tutorPreference: state.tutorPreference,
       hasClaudeKey: !!getClaudeKey(),
       hasObsidianToken: !!getObsidianConfig().token,
       hasOfflineBank: hasOfflineBank(b.id),
     });
     if (info.kind === 'study') sfx.play('door-open'); // a locked door stays silent
-    const where = locateSubsection(curriculum, b.id);
-    const brazier = where ? brazierOffers(curriculum, state).find((o) => o.districtId === where.district.id) : null;
+    const where = locateSubsection(this.curriculum, b.id);
+    const brazier = where ? brazierOffers(this.curriculum, state).find((o) => o.districtId === where.district.id) : null;
     openDoorPanel(info, {
       onChoose: (tutorId) => this.startEncounter(sub, tutorId, info),
       brazier,
@@ -327,8 +344,18 @@ export default class GameScene extends Phaser.Scene {
   }
 
   /** Spend region materials to light a district's brazier early (T21). Cosmetic: it unlocks and consolidates nothing. */
+  /** E at a Lecture Hall building: choose a topic, then a tutor guides you through it. */
+  interactWithLecture(b) {
+    openLecturePanel({
+      title: b.title,
+      sourceFile: b.sourceFile || b.workshopFile || null,
+      curriculum: this.curriculum,
+    });
+  }
+
+
   lightBrazier(districtId) {
-    const r = lightBrazierEarly(curriculum, this.saveStore.state, districtId);
+    const r = lightBrazierEarly(this.curriculum, this.saveStore.state, districtId);
     if (r.ok) {
       this.saveStore.update(() => r.save);
       this.saveStore.save();
@@ -358,7 +385,7 @@ export default class GameScene extends Phaser.Scene {
   startEncounter(subsection, personaId, info) {
     if (this.encounterOpen) return;
     this.saveStore.update((s) => ({ ...s, tutorPreference: { ...s.tutorPreference, [subsection.id]: personaId } }));
-    const where = locateSubsection(curriculum, subsection.id);
+    const where = locateSubsection(this.curriculum, subsection.id);
     const sub = { ...subsection, module: where?.module?.title ?? subsection.module };
     const bank = hasOfflineBank(sub.id);
     const makeOfflineTutor = () => createOfflineTutor({ personaId });
@@ -436,7 +463,7 @@ export default class GameScene extends Phaser.Scene {
   /** Tab: the journal (stats, map, things to revisit, recent sessions). Read-only: it never changes progress. */
   openJournalScreen() {
     if (isAnyOverlayOpen()) return;
-    openJournal({ curriculum, save: this.saveStore.state });
+    openJournal({ curriculum: this.curriculum, save: this.saveStore.state });
   }
 
   openMenu() {
@@ -558,6 +585,7 @@ export default class GameScene extends Phaser.Scene {
       this.prompt.setText(`${door.title}\n${label}`).setVisible(true);
       if (Phaser.Input.Keyboard.JustDown(this.eKey) || Phaser.Input.Keyboard.JustDown(this.enterKey)) {
         if (door.type === 'workshop') this.interactWithWorkshop(door);
+        else if (door.type === 'lecture') this.interactWithLecture(door);
         else this.interactWithDoor(door);
       }
     } else {
