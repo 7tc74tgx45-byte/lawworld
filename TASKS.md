@@ -141,7 +141,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Wire into `GameScene.js` region border colliders.
   - Done when crossing a region border shows a colour flash and the region name.
 
-- [ ] **T18 — Sound effects (Web Audio)**
+- [x] **T18 — Sound effects (Web Audio)**
   - Create `src/audio/sfx.js`: all sounds synthesised with Web Audio API, no files loaded.
   - Footsteps: short noise burst (white noise, 80ms, exponential decay) — pitch varies by terrain: grass (low, 200Hz filter), stone (mid, 800Hz), sand (soft, 100Hz), snow (crisp, 1.2kHz).
   - Door open: ascending chirp (sine sweep 300→900Hz, 200ms).

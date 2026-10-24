@@ -10,6 +10,8 @@ export const DEFAULT_SETTINGS = {
   obsidianToken: '',
   musicVolume: 0.5, // 0-1 (T15)
   musicMuted: false,
+  sfxVolume: 0.7, // 0-1 (T18)
+  sfxMuted: false,
 };
 
 function storage() {

@@ -28,6 +28,8 @@ import Weather from './Weather.js';
 import ClientNpcs from './ClientNpcs.js';
 import { startClientCase, canServeClient } from './clientFlow.js';
 import { music } from '../audio/music.js';
+import { sfx } from '../audio/sfx.js';
+import { createStepper, tickStepper, terrainAt, footstepName } from '../logic/sfx.js';
 import { getSetting } from '../settings.js';
 import { TransitionManager } from '../ui/transitions.js';
 
@@ -125,6 +127,9 @@ export default class GameScene extends Phaser.Scene {
     music.setVolume(getSetting('musicVolume'));
     music.mute(getSetting('musicMuted'));
     this.events.once('shutdown', () => music.stop());
+    sfx.setVolume(getSetting('sfxVolume'));
+    sfx.mute(getSetting('sfxMuted'));
+    this.stepper = createStepper();
     this.updateRegion(true);
     if (!this.currentRegionId) music.playRegion('hub'); // started on a path between regions
     this.updateWeather(true);
@@ -260,6 +265,7 @@ export default class GameScene extends Phaser.Scene {
       hasObsidianToken: !!getObsidianConfig().token,
       hasOfflineBank: hasOfflineBank(b.id),
     });
+    if (info.kind === 'study') sfx.play('door-open'); // a locked door stays silent
     openDoorPanel(info, { onChoose: (tutorId) => this.startEncounter(sub, tutorId, info) });
   }
 
@@ -430,6 +436,10 @@ export default class GameScene extends Phaser.Scene {
     this.lastWalkDist = this.walkDist;
     this.animateCharacters(delta, walking);
     this.player.setDepth(this.player.y);
+    // One footstep per ~400 ms of walking, coloured by the ground under the player's feet.
+    if (tickStepper(this.stepper, delta, walking)) {
+      sfx.play(footstepName(terrainAt(this.world, Math.floor(this.player.x / TILE_SIZE), Math.floor(this.player.y / TILE_SIZE))));
+    }
     this.updateRegion();
     // Weather changes at the transition midpoint (see updateRegion), not mid-path.
 

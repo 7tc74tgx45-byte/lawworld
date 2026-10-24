@@ -10,6 +10,8 @@ import { createClientEncounter } from '../logic/clientEncounter.js';
 import { describeError } from '../logic/apiErrors.js';
 import { viewState, messageView } from '../logic/encounterView.js';
 import { openOverlay, el, button } from './dom.js';
+import { sfx } from '../audio/sfx.js';
+import { evaluationSound } from '../logic/sfx.js';
 
 let active = null;
 export const isClientEncounterOpen = () => !!active;
@@ -84,6 +86,8 @@ export function openClientEncounter({ subsection, tutor, clientName = 'The clien
 
   function sync(res) {
     if (closed) return;
+    const heard = evaluationSound(res?.evaluation);
+    if (heard) sfx.play(heard);
     res?.messages?.forEach(addMsg);
     finished = !!res?.done;
     render();

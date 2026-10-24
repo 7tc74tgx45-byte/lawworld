@@ -7,6 +7,8 @@ import { testClaudeConnection, getClaudeKey } from '../api/claude.js';
 import { testConnection as testObsidian } from '../api/obsidian.js';
 import { music } from '../audio/music.js';
 import { clampVolume } from '../logic/music.js';
+import { sfx } from '../audio/sfx.js';
+import { clampSfxVolume } from '../logic/sfx.js';
 
 function field(labelText, { type = 'text', value = '', placeholder = '', id }) {
   const wrap = el('div', 'lw-field');
@@ -111,8 +113,37 @@ export function openSettings({ onClosed } = {}) {
   muteLabel.append(mute, ' Mute music');
   musicWrap.append(volLabel, vol, muteLabel);
 
+  // Sound effects (T18): footsteps, doors, chimes. Releasing the slider plays a sample so you can judge the level.
+  const sfxWrap = el('div', 'lw-field');
+  const sfxLabel = el('label', null, `Sound effects volume: ${Math.round(clampSfxVolume(cur.sfxVolume) * 100)}%`);
+  const sfxVol = document.createElement('input');
+  sfxVol.type = 'range';
+  sfxVol.min = '0';
+  sfxVol.max = '100';
+  sfxVol.id = 'lw-sfx-vol';
+  sfxVol.value = String(Math.round(clampSfxVolume(cur.sfxVolume) * 100));
+  sfxLabel.htmlFor = sfxVol.id;
+  sfxVol.oninput = () => {
+    const v = clampSfxVolume(Number(sfxVol.value) / 100);
+    sfxLabel.textContent = `Sound effects volume: ${Math.round(v * 100)}%`;
+    setSetting('sfxVolume', v);
+    sfx.setVolume(v);
+  };
+  sfxVol.onchange = () => sfx.play('correct');
+  const sfxMuteLabel = el('label', 'lw-check');
+  const sfxMute = document.createElement('input');
+  sfxMute.type = 'checkbox';
+  sfxMute.checked = !!cur.sfxMuted;
+  sfxMute.onchange = () => {
+    setSetting('sfxMuted', sfxMute.checked);
+    sfx.mute(sfxMute.checked);
+  };
+  sfxMuteLabel.append(sfxMute, ' Mute sound effects');
+  sfxWrap.append(sfxLabel, sfxVol, sfxMuteLabel);
+
   body.append(
     musicWrap,
+    sfxWrap,
     key.wrap, model.wrap, row(bClaude), claudeStatus,
     url.wrap, token.wrap, row(bObs), obsStatus,
     certNote, envNote, row(bDone),

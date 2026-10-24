@@ -12,6 +12,8 @@ import { describeError } from '../logic/apiErrors.js';
 import { viewState, messageView, pipStates } from '../logic/encounterView.js';
 import { openOverlay, el, button } from './dom.js';
 import { getPortrait } from './portraits.js';
+import { sfx } from '../audio/sfx.js';
+import { evaluationSound } from '../logic/sfx.js';
 
 let active = null;
 
@@ -127,6 +129,10 @@ export function openEncounter({ subsection, tutor, priorGaps, loadMemory, onOpen
   let currentPrompt = null;
   function sync(res) {
     if (closed) return; // the player left while the tutor was thinking: the overlay is gone
+    // Chime for a solid/correct answer, thud for a missing/wrong one. Consolidation gets the fanfare instead of the last chime.
+    const consolidated = !!res?.done && !reported && engine.result().outcome === 'consolidated';
+    const heard = consolidated ? 'fanfare' : evaluationSound(res?.evaluation);
+    if (heard) sfx.play(heard);
     res?.messages?.forEach(addMsg);
     stage = res?.stage ?? stage;
     if (res?.prompt) {

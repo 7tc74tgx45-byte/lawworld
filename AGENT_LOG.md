@@ -950,3 +950,32 @@ Cost $0.36 · 2 min · attempt 1
 - **Midpoint failures:** if the midpoint callback throws, the error is logged and the fade still completes, so the overlay can't get stuck.
 
 **Next:** T18 (sound effects) can play a swoosh at crossing start. It should reuse the music AudioContext and respect `musicMuted`.
+
+## T18 — done — 2026-10-24 04:51:26
+Cost $0.87 · 4 min · attempt 1
+
+**What changed:** All eight sound effects are synthesised in code and wired into the game. `npm run build` and `npm test` pass (277 tests, 13 new). I haven't heard any of it in a browser, so the levels and tone are untuned.
+
+- **Footsteps:** one step per 400ms of real walking, not while pushing into a wall. Each is an 80ms white-noise burst with an exponential decay, run through a filter set by the ground: grass is low-pass at 200Hz, sand low-pass at 100Hz, stone band-pass at 800Hz, and snow band-pass at 1.2kHz. Paths count as stone, shore tiles as sand, winter ground as snow, and the rest as grass. Pitch and level vary slightly per step.
+- **Door:** a sine sweep from 300 to 900Hz over 200ms. It plays when a study door opens. Locked doors stay silent.
+- **Correct:** C5 and E5 sines, 400ms, slow decay.
+- **Wrong:** an 80Hz sine thump over 150ms with a short noise burst.
+- **Fanfare:** C4, E4, G4 and C5 triangle notes, 100ms apart, through a convolver whose impulse response is generated in code. The last note rings on into the reverb.
+- **Where they fire:**
+  - Correct and wrong sounds play in the main encounter and in client cases, from the evaluation result.
+  - The fanfare plays instead of the last chime when the verdict is CONSOLIDATED.
+- **Code:** `src/audio/sfx.js` has the `SFXManager` and the shared `sfx` instance. The rules are in `src/logic/sfx.js` (terrain, step timing, which answers chime). Tests are in `tests/sfx.test.js`.
+- **Settings:** there is now an SFX volume slider and mute toggle in Settings. The slider plays a chime when you let go. Both are saved in settings (`sfxVolume`, `sfxMuted`).
+- **TASKS.md:** T18 is ticked.
+
+**Try it:** Run `npm run dev` and click once on the page, because browsers keep audio off until a click or key press. Walk on grass, then on a stone path, along the shore, and in the Public Law region, and you should hear four distinct footsteps. Press E at an unlocked door for the chirp. In an encounter, answer the checkpoint MCQs to hear the chime and the thud. A fully solid run ending in CONSOLIDATED should play the fanfare. Esc then Settings has the SFX volume slider and mute.
+
+**Design notes:** - **Evaluation sound:** the brief says "correct/wrong into encounter evaluation callback". MCQs chime or thud on right or wrong. Open answers chime when solid and thud when missing. **Partial is silent**, because a follow-up comes next and a thud there would feel like punishment (VISION §1.4). Say if you want partial to make a sound.
+- **Fanfare:** it replaces the final chime rather than stacking on it.
+- **Early sounds dropped:** a sound requested before the browser has allowed audio is dropped, not queued. The first footstep after your first click is the first one you hear.
+- **Client cases:** they get the same chime and thud. They have no fanfare, since they don't consolidate anything.
+- **Separate volume:** SFX volume is its own setting rather than sharing the music slider, so footsteps can be turned down while the music stays.
+- **Separate audio context:** SFX use their own AudioContext rather than the music one. That keeps `music.js` untouched.
+- **Not done:** the T17 hint about a swoosh at region crossing. It wasn't in the T18 spec.
+
+**Next:** Tune levels by ear. Optionally add a swoosh for region crossings, and a soft "locked" sound at padlocked doors.
