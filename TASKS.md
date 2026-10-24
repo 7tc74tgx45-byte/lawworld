@@ -111,4 +111,10 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
 - [ ] **T14 — QA pass against the vision**
   - Read the whole codebase against VISION.md. Write `QA_REPORT.md`: what works, what violates the learning rules, bugs, missing pieces, ranked. Fix the top issues that fit this session; add the rest as new tasks below.
 
+- [ ] **T15 — Atmospheric music**
+  - Source CC0 medieval/ambient tracks from OpenGameArt.org
+  - Wire into Phaser sound system with looping per district
+  - Crossfade when player crosses district borders
+  - Separate tenser track for the encounter screen
+
 ## Agent-proposed
