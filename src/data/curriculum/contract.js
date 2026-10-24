@@ -88,4 +88,16 @@ export const contractDistricts = [
       ['documents', 'Mistakes in Documents', '§8.6 Mistakes in Documents', ['rectification', 'non est factum', 'correcting by construction'], ['Chartbrook v Persimmon Homes', 'Saunders v Anglia Building Society'], [], { pre: ['classes'] }],
     ],
   }),
+  D({
+    id: 'contract-workshops-w3', title: 'Workshop W3: Certainty, Intention & Mistake', chapter: 'WS', sourceFile: 'LAW7054-Contract-W3-Workshop-Prep.md', after: [],
+    subs: [
+      ['w3', 'Workshop W3: Certainty, Intention & Mistake', 'Workshop Prep — W3', ['certainty of terms', 'intention to create legal relations', 'mistake'], [], [], { pre: [], type: 'workshop', workshopFile: 'LAW7054-Contract-W3-Workshop-Prep.md' }],
+    ],
+  }),
+  D({
+    id: 'contract-workshops-w4', title: 'Workshop W4: Consideration & Variation', chapter: 'WS', sourceFile: 'LAW7054-Contract-W4-Workshop-Prep.md', after: [],
+    subs: [
+      ['w4', 'Workshop W4: Consideration & Variation', 'Workshop Prep — W4', ['consideration', 'part-payment', 'estoppel', 'duress'], [], [], { pre: [], type: 'workshop', workshopFile: 'LAW7054-Contract-W4-Workshop-Prep.md' }],
+    ],
+  }),
 ];

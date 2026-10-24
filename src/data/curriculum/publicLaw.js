@@ -135,4 +135,16 @@ export const publicLawDistricts = [
       ['hra-and-sovereignty', 'How the HRA Squares with Sovereignty', 'HRA 1998 and Parliamentary Supremacy — Summary', ['sovereignty preserved', 'reform of HRA'], [], ['Human Rights Act 1998'], { pre: ['s3', 's4', 's10'] }],
     ],
   }),
+  D({
+    id: 'pl-workshops-w1', title: 'Workshop W1: Human Rights & Public Law', chapter: 'WS', sourceFile: 'LAW7055-PublicLaw-W1-Workshop-Prep.md', after: [],
+    subs: [
+      ['w1', 'Workshop W1: Human Rights & Public Law', 'Workshop Prep — W1', ['ECHR', 'HRA 1998', 'public bodies', 'qualified rights'], [], [], { pre: [], type: 'workshop', workshopFile: 'LAW7055-PublicLaw-W1-Workshop-Prep.md' }],
+    ],
+  }),
+  D({
+    id: 'pl-workshops-w2', title: 'Workshop W2: Executive & Parliament', chapter: 'WS', sourceFile: 'LAW7055-PublicLaw-W2-Workshop-Prep.md', after: [],
+    subs: [
+      ['w2', 'Workshop W2: Executive & Parliament', 'Workshop Prep — W2', ['prerogative powers', 'parliamentary supremacy', 'executive accountability'], [], [], { pre: [], type: 'workshop', workshopFile: 'LAW7055-PublicLaw-W2-Workshop-Prep.md' }],
+    ],
+  }),
 ];

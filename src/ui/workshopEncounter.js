@@ -280,7 +280,7 @@ export function openWorkshopEncounter({ title, scenarios, flashCards, onClose })
   function finish() {
     panel.innerHTML = '';
     panel.append(el('h2', 'lw-h', `✅ ${title} — Done`));
-    panel.append(el('p', null, 'Workshop prep complete. You're ready for the session.'));
+    panel.append(el('p', null, 'Workshop prep complete. You are ready for the session.'));
     panel.append(button('Done', 'primary', () => {
       closeOverlay();
       onClose?.({ completed: true });

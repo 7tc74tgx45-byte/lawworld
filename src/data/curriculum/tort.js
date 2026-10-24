@@ -97,4 +97,22 @@ export const tortDistricts = [
     ],
   }),
 
+  D({
+    id: 'tort-workshops-w2', title: 'Workshop W2: Intentional Torts', chapter: 'WS', sourceFile: 'LAW7054-Tort-W2-Workshop-Prep.md', after: [],
+    subs: [
+      ['w2', 'Workshop W2: Intentional Torts', 'Workshop Prep — W2', ['trespass', 'battery', 'false imprisonment', 'nuisance'], [], [], { pre: [], type: 'workshop', workshopFile: 'LAW7054-Tort-W2-Workshop-Prep.md' }],
+    ],
+  }),
+  D({
+    id: 'tort-workshops-w3', title: 'Workshop W3: Duty of Care & Psychiatric Injury', chapter: 'WS', sourceFile: 'LAW7054-Tort-W3-Workshop-Prep.md', after: [],
+    subs: [
+      ['w3', 'Workshop W3: Duty & Psychiatric Injury', 'Workshop Prep — W3', ['duty of care', 'psychiatric harm', 'Caparo', 'primary/secondary victims'], [], [], { pre: [], type: 'workshop', workshopFile: 'LAW7054-Tort-W3-Workshop-Prep.md' }],
+    ],
+  }),
+  D({
+    id: 'tort-workshops-w5', title: 'Workshop W5: Causation & Damage', chapter: 'WS', sourceFile: 'LAW7054-Tort-W5-Workshop-Prep.md', after: [],
+    subs: [
+      ['w5', 'Workshop W5: Causation & Damage', 'Workshop Prep — W5', ['but for test', 'novus actus', 'remoteness', 'damage'], [], [], { pre: [], type: 'workshop', workshopFile: 'LAW7054-Tort-W5-Workshop-Prep.md' }],
+    ],
+  }),
 ];

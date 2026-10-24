@@ -87,4 +87,10 @@ export const foundationsDistricts = [
       ['additional', 'Additional Legal Professionals', '9.6 Additional Legal Professionals', ['CILEx', 'licensed conveyancers', 'paralegals'], [], [], { pre: ['two-branches'] }],
     ],
   }),
+  D({
+    id: 'found-workshops-w5', title: 'Workshop W5: Judicial Precedent', chapter: 'WS', sourceFile: 'LAW7053-Foundations-W5-Workshop-Prep.md', after: [],
+    subs: [
+      ['w5', 'Workshop W5: Judicial Precedent', 'Workshop Prep — W5', ['ratio decidendi', 'obiter dicta', 'binding precedent', 'distinguishing'], [], [], { pre: [], type: 'workshop', workshopFile: 'LAW7053-Foundations-W5-Workshop-Prep.md' }],
+    ],
+  }),
 ];
