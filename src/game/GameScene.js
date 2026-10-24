@@ -29,6 +29,7 @@ import ClientNpcs from './ClientNpcs.js';
 import { startClientCase, canServeClient } from './clientFlow.js';
 import { music } from '../audio/music.js';
 import { getSetting } from '../settings.js';
+import { TransitionManager } from '../ui/transitions.js';
 
 const PLAYER_SPEED = 150;
 
@@ -106,9 +107,6 @@ export default class GameScene extends Phaser.Scene {
     this.prompt = this.add
       .text(400, 520, '', { fontSize: '14px', fill: '#ffffff', backgroundColor: '#000000cc', padding: { x: 8, y: 4 }, align: 'center' })
       .setOrigin(0.5, 1).setScrollFactor(0).setDepth(100000).setVisible(false);
-    this.regionBanner = this.add
-      .text(400, 90, '', { fontSize: '30px', fontStyle: 'bold', fill: '#ffffff', stroke: '#000000', strokeThickness: 5, align: 'center' })
-      .setOrigin(0.5).setScrollFactor(0).setDepth(100001).setAlpha(0);
     this.add
       .text(8, 8, 'WASD / Arrows to move · E at a door, client or garden plot · Tab journal · Esc menu', { fontSize: '12px', fill: '#ffffff', backgroundColor: '#00000066', padding: { x: 4, y: 2 } })
       .setScrollFactor(0).setDepth(100000);
@@ -122,6 +120,8 @@ export default class GameScene extends Phaser.Scene {
     this.refreshClients();
     this.time.addEvent({ delay: 15000, loop: true, callback: () => this.refreshClients() }); // cooldowns end, settings change
     this.currentRegionId = null;
+    this.transitions = new TransitionManager();
+    this.events.once('shutdown', () => this.transitions.destroy());
     music.setVolume(getSetting('musicVolume'));
     music.mute(getSetting('musicMuted'));
     this.events.once('shutdown', () => music.stop());
@@ -223,15 +223,19 @@ export default class GameScene extends Phaser.Scene {
     const ty = Math.floor(this.player.y / TILE_SIZE);
     const region = regionAt(this.world, tx, ty);
     if (!region || region.id === this.currentRegionId) return;
-    this.currentRegionId = region.id;
-    music.playRegion(region.id); // crossfades 2 s; the paths between regions keep the last theme
-    if (silent) return;
-    const season = { spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter' }[region.season] ?? '';
-    const title = region.isHub ? 'Foundations Town' : region.title;
-    this.regionBanner.setText(`${title}\n${region.moduleTitle} · ${season}`).setFontSize(30);
-    this.tweens.killTweensOf(this.regionBanner);
-    this.regionBanner.setAlpha(0);
-    this.tweens.add({ targets: this.regionBanner, alpha: 1, duration: 300, yoyo: true, hold: 1600 });
+    if (silent) {
+      this.currentRegionId = region.id;
+      music.playRegion(region.id); // crossfades 2 s; the paths between regions keep the last theme
+      return;
+    }
+    // Crossing a border (T17): flash the season colour and name; swap music and weather while the screen is covered.
+    // currentRegionId changes at the midpoint, so a refused crossing (one already running) is retried next frame.
+    const from = this.world.regions.find((r) => r.id === this.currentRegionId) ?? null;
+    this.transitions.crossRegion(from, region, () => {
+      this.currentRegionId = region.id;
+      music.playRegion(region.id);
+      this.weather.setSeason(region.season, true);
+    });
   }
 
   /** Autosave the player's position and region, but only when they actually moved. */
@@ -427,7 +431,7 @@ export default class GameScene extends Phaser.Scene {
     this.animateCharacters(delta, walking);
     this.player.setDepth(this.player.y);
     this.updateRegion();
-    this.updateWeather();
+    // Weather changes at the transition midpoint (see updateRegion), not mid-path.
 
     // A client close by takes priority over a door: E starts their case.
     const near = this.clientNpcs.nearest(this.player.x, this.player.y);

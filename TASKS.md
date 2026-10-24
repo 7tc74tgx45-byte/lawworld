@@ -133,7 +133,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Export `getPortrait(tutorId)` → `HTMLCanvasElement`.
   - Done when each tutor's portrait appears in the encounter panel.
 
-- [ ] **T17 — Region transitions**
+- [x] **T17 — Region transitions**
   - Create `src/ui/transitions.js`: DOM overlay div (full-screen, `position:fixed`, `z-index:1000`, `pointer-events:none`).
   - Fade transition: opacity 0→1→0 over 600ms total, colour matches region season (green/amber/grey/white).
   - Region name banner: centred text with season colour, appears during the fade-in peak (300ms), font size 2rem, fades with the overlay.

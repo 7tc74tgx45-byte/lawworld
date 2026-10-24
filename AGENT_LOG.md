@@ -929,3 +929,24 @@ Cost $0.62 · 5 min · attempt 1
 - **Client encounters.** The client-case overlay (`src/ui/clientEncounter.js`) still shows its colour swatch; this task covered only the main encounter panel.
 
 **Next:** Show the tutor portrait in the door panel's tutor picker and in the client overlay. Move on to T17 (transitions) and T18 (sound effects).
+
+## T17 — done — 2026-10-24 04:47:05
+Cost $0.36 · 2 min · attempt 1
+
+**What changed:** Crossing a region border now fades the screen to the destination's season colour and shows the region name in the middle. The full test suite (264 tests) and the build both pass. I haven't seen the flash in a browser.
+
+- **Timing:** the fade runs 0→1→0 over 600ms. The banner is 2rem and fades with the overlay.
+- **Colours:** spring green, summer amber, autumn grey, winter white. Banner text is a contrasting tone of the same season.
+- **Midpoint swap:** music and weather change when the screen is fully covered. `GameScene.updateRegion` calls `TransitionManager.crossRegion(from, to, onMidpoint)`.
+- **New files:** `src/logic/transitions.js` (timing, colours and the one-crossing-at-a-time rule), `src/ui/transitions.js` (the fixed full-screen div, `z-index:1000`, `pointer-events:none`) and `tests/transitions.test.js` (5 tests).
+- **TASKS.md:** T17 is ticked.
+
+**Try it:** Run `npm run dev` and walk from the hub into Contract, Tort or Public Law. You should see an amber, grey or white flash with the region name at its peak, and the weather and music change under it. Walking back to the hub gives a green flash saying "Foundations Town". Open the menu or a door panel right after crossing to check that the overlay never blocks clicks.
+
+**Design notes:** - **Old banner removed:** the Phaser region banner is gone, so the new DOM banner is the only one. It no longer shows the module title and season line (e.g. "Contract · Summer"). Say if you want that line back as a smaller subtitle.
+- **Weather timing:** weather now switches at the transition midpoint, not part-way along the path between regions. The paths belong to no region, so the flash fires when the player enters the next region.
+- **Walking:** the player isn't frozen during the 600ms flash. It's short, and freezing would feel sticky.
+- **Contrast:** the contrast test failed on my first summer text colour (white-ish on amber), so I changed it to dark brown. That test now guards the banner colours against the same mistake.
+- **Midpoint failures:** if the midpoint callback throws, the error is logged and the fade still completes, so the overlay can't get stuck.
+
+**Next:** T18 (sound effects) can play a swoosh at crossing start. It should reuse the music AudioContext and respect `musicMuted`.
