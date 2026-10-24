@@ -4,7 +4,9 @@ import Phaser from 'phaser';
 import { TILE_SIZE } from '../logic/worldQuery.js';
 import { drawTile } from './tileDraw.js';
 import { makeGardenTextures } from './gardenDraw.js';
-import { ensureBuildingTexture, makeFurnitureTextures, makeCharacterTextures, makeWeatherTextures } from './sprites.js';
+import { ensureBuildingTexture, ensureLectureHallTexture, LH_PX_H, BLD_PX_H, makeFurnitureTextures, makeCharacterTextures, makeWeatherTextures } from './sprites.js';
+
+const LH_EXTRA_PX = LH_PX_H - BLD_PX_H; // extra height in pixels for the lecture hall tower
 
 const CHUNK_TILES = 16;
 const CHUNK_PX = CHUNK_TILES * TILE_SIZE;
@@ -32,7 +34,9 @@ export default class WorldRenderer {
   }
 
   buildingTexture(b, state) {
-    return ensureBuildingTexture(this.scene, state, b.side, this.seasonOf.get(b.regionId) ?? 'spring');
+    const season = this.seasonOf.get(b.regionId) ?? 'spring';
+    if (b.type === 'lecture') return ensureLectureHallTexture(this.scene, state, b.side, season);
+    return ensureBuildingTexture(this.scene, state, b.side, season);
   }
 
   addFurniture() {
@@ -43,7 +47,13 @@ export default class WorldRenderer {
       this.braziers.set(d.id, br);
     }
     for (const b of world.buildings) {
-      const spr = scene.add.image(b.tx * TILE_SIZE, b.ty * TILE_SIZE, this.buildingTexture(b, 'locked')).setOrigin(0).setDepth(b.ty * TILE_SIZE + 64);
+      // Lecture halls are taller: shift the sprite up so the door stays at the tile position.
+      const sprY = b.tx * TILE_SIZE;
+      const extraH = b.type === 'lecture' ? LH_EXTRA_PX : 0;
+      const sprX = b.tx * TILE_SIZE;
+      const sprYpos = b.ty * TILE_SIZE - (b.side === 'top' ? 0 : extraH);
+      const spr = scene.add.image(sprX, sprYpos, this.buildingTexture(b, 'locked')).setOrigin(0).setDepth(b.ty * TILE_SIZE + 64);
+      void sprY;
       this.buildingSprites.set(b.id, spr);
       // Alert icon above the building door (centred, slightly above mid-height). Hidden until explored.
       const alertX = b.tx * TILE_SIZE + (b.side === 2 ? 32 : 16);

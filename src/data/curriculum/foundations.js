@@ -93,4 +93,11 @@ export const foundationsDistricts = [
       ['w5', 'Workshop W5: Judicial Precedent', 'Workshop Prep — W5', ['ratio decidendi', 'obiter dicta', 'binding precedent', 'distinguishing'], [], [], { pre: [], type: 'workshop', workshopFile: 'LAW7053-Foundations-W5-Workshop-Prep.md' }],
     ],
   }),
+  // Dedicated Lecture Hall — one building for the whole hub; panel shows ALL modules.
+  D({
+    id: 'found-lecture-hall', title: 'Lecture Hall', chapter: 'Hub', after: [],
+    subs: [
+      ['lecture-hall', 'Lecture Hall', 'Lecture Hall', [], [], [], { pre: [], type: 'lecture' }],
+    ],
+  }),
 ];

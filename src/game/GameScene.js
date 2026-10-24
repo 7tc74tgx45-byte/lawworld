@@ -344,13 +344,14 @@ export default class GameScene extends Phaser.Scene {
   }
 
   /** Spend region materials to light a district's brazier early (T21). Cosmetic: it unlocks and consolidates nothing. */
-  /** E at a Lecture Hall building: choose a topic, then a tutor guides you through it. */
+  /** E at a Lecture Hall building: open the hub hall — always shows all modules. */
   interactWithLecture(b) {
     openLecturePanel({
-      title: b.title,
-      moduleId: b.moduleId || null,
+      title: 'Lecture Hall',
+      moduleId: null, // hub hall: show all modules grouped
       curriculum: this.curriculum,
     });
+    void b;
   }
 
 

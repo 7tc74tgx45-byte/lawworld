@@ -1,12 +1,19 @@
 // Programmatic sprite textures: buildings (per state, side and season), signpost, brazier, player frames, cat frames,
 // weather particles. No image files.
-import { drawBuilding, buildingKey, BLD_PX_W, BLD_PX_H } from './buildingDraw.js';
+import { drawBuilding, buildingKey, BLD_PX_W, BLD_PX_H, drawLectureHall, lectureHallKey, LH_PX_W, LH_PX_H } from './buildingDraw.js';
 import { drawPlayer, drawCatWalk, drawCatSit } from './characterDraw.js';
 import { drawClient } from './clientDraw.js';
 import { TILE_SIZE } from '../logic/worldQuery.js';
 import { FACINGS } from '../logic/anim.js';
 
-export { buildingKey, BLD_PX_W, BLD_PX_H };
+export { buildingKey, BLD_PX_W, BLD_PX_H, lectureHallKey, LH_PX_W, LH_PX_H };
+
+/** Create (once) and return the key of a lecture-hall texture. */
+export function ensureLectureHallTexture(scene, state, side, season) {
+  const key = lectureHallKey(state, side, season);
+  canvasTexture(scene, key, LH_PX_W, LH_PX_H, (ctx) => drawLectureHall(ctx, state, side, season));
+  return key;
+}
 const S = TILE_SIZE;
 
 export function canvasTexture(scene, key, w, h, draw) {

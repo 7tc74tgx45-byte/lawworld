@@ -136,3 +136,136 @@ export function drawBuilding(ctx, state, side, season) {
 }
 
 export const buildingKey = (state, side, season) => `bld-${state}-${side}-${season}`;
+
+// ─── Lecture Hall — taller castle-like building ──────────────────────────────
+
+/** Canvas dimensions: 3 tiles wide, 4 tiles tall (2 extra for tower/battlements). */
+export const LH_PX_W = BLD_PX_W;
+export const LH_PX_H = BLD_PX_H + 2 * S;
+
+const STONE_LIGHT = '#c0b8b0';
+const STONE_MID   = '#8c8278';
+const STONE_DARK  = '#665e56';
+const MORTAR      = '#4a4440';
+
+/** Stone-block wall fill. */
+function stoneWall(ctx, x, y, w, h) {
+  R(ctx, STONE_MID, x, y, w, h);
+  for (let row = 0; row < Math.ceil(h / 8); row++) {
+    const ry = y + row * 8;
+    R(ctx, MORTAR, x, ry, w, 1);
+    const offset = (row % 2) * 8;
+    for (let col = offset; col < w; col += 16) R(ctx, MORTAR, x + col, ry, 1, 8);
+  }
+  R(ctx, STONE_LIGHT, x, y, 1, h);
+}
+
+/** Battlements along the top edge of a wall segment. */
+function battlements(ctx, x, y, w) {
+  const MW = 6, CW = 4, MH = 8;
+  R(ctx, STONE_DARK, x, y - 1, w, 1);
+  for (let px = x; px < x + w; px += MW + CW) {
+    R(ctx, STONE_MID, px, y - MH, MW, MH);
+    R(ctx, STONE_LIGHT, px, y - MH, 1, MH);
+    R(ctx, STONE_DARK, px + MW - 1, y - MH, 1, MH);
+  }
+}
+
+/** Arched narrow window. */
+function archWindow(ctx, lit, x, y) {
+  const ww = 10, wh = 16;
+  R(ctx, MORTAR, x - 1, y - 1, ww + 2, wh + 2);
+  R(ctx, lit ? '#ffe9a8' : '#4a5560', x, y + 5, ww, wh - 5);
+  R(ctx, lit ? '#ffd060' : '#3a4550', x + 2, y + 2, ww - 4, 4);
+  R(ctx, lit ? '#ffe9a8' : '#4a5560', x + 1, y + 3, ww - 2, 3);
+  R(ctx, lit ? '#ffe9a8' : '#4a5560', x, y + 5, ww, 1);
+  R(ctx, STONE_MID, x + 4, y, 2, wh + 2);
+  R(ctx, STONE_MID, x, y + Math.floor(wh * 0.55), ww, 1);
+}
+
+/** Grand arched doorway. */
+function hallDoor(ctx, st, x, y) {
+  const dw = S - 6, dh = 28;
+  R(ctx, MORTAR, x - 3, y - 4, dw + 6, dh + 4);
+  R(ctx, st.door, x, y, dw, dh - 6);
+  R(ctx, st.door, x + 2, y - 3, dw - 4, 5);
+  R(ctx, st.door, x + 1, y - 2, dw - 2, 4);
+  R(ctx, 'rgba(0,0,0,0.25)', x + 5, y, 1, dh - 6);
+  R(ctx, 'rgba(0,0,0,0.25)', x + dw - 6, y, 1, dh - 6);
+  R(ctx, '#f2c94c', x + dw - 7, y + 14, 3, 3);
+  R(ctx, '#8d8d96', x - 4, y + dh - 6, dw + 8, 5);
+  R(ctx, DARK, x - 4, y + dh - 2, dw + 8, 1);
+}
+
+/**
+ * Lecture Hall: 3×4-tile castle tower.
+ * Canvas is LH_PX_W × LH_PX_H (3 × 4 tiles).
+ * The door always faces the lane (bottom for side='top', top for side='bottom').
+ */
+export function drawLectureHall(ctx, state, side, season) {
+  const st = STATE_STYLE[state];
+  const ex = seasonExtra(season);
+  const W = LH_PX_W, H = LH_PX_H;
+  const outerTop = side === 'top';
+  const lit = state !== 'locked';
+
+  // Full stone body
+  stoneWall(ctx, 0, 0, W, H);
+
+  // Central tower (1 tile wide, upper 2 tiles)
+  const tX = Math.floor((W - S) / 2);
+  const towerY = outerTop ? 0 : H - 2 * S;
+  const towerH = 2 * S;
+  stoneWall(ctx, tX, towerY, S, towerH);
+
+  // Tower battlements on outer edge
+  const tbY = outerTop ? towerY : towerY + towerH;
+  battlements(ctx, tX, tbY, S);
+
+  // Tower window
+  archWindow(ctx, lit, tX + Math.floor((S - 10) / 2), towerY + 10);
+
+  // Body section (lower 2 tiles of canvas)
+  const bodyY = outerTop ? 2 * S : 0;
+  const bodyH = 2 * S;
+  stoneWall(ctx, 0, bodyY, W, bodyH); // overdraw to solidify
+
+  // Body battlements on outer body edge
+  const bbY = outerTop ? bodyY : bodyY + bodyH;
+  battlements(ctx, 0, bbY, W);
+
+  // Side turrets
+  const ctW = 10;
+  for (const cx of [0, W - ctW]) {
+    stoneWall(ctx, cx, towerY, ctW, towerH);
+    battlements(ctx, cx, tbY, ctW);
+  }
+
+  // Windows on body
+  const winY = bodyY + (outerTop ? bodyH - 26 : 8);
+  archWindow(ctx, lit, 14, winY);
+  archWindow(ctx, lit, W - 24, winY);
+
+  // Door on lane side
+  const doorY = outerTop ? H - 32 : bodyY + 2;
+  hallDoor(ctx, st, S + 6, doorY);
+
+  // State mark on tower
+  mark(ctx, st.mark, tX + 2, towerY + towerH - 20);
+
+  // Seasonal
+  if (ex.roofDress === 'snow') {
+    R(ctx, '#ffffff', 0, bbY - 4, W, 4);
+    R(ctx, '#ffffff', tX, tbY - 4, S, 4);
+  } else if (ex.roofDress === 'leaves') {
+    for (const [lx, c] of [[14, 0], [W - 18, 1]]) R(ctx, ex.accent[c], lx, bodyY + 6, 3, 2);
+  }
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, W - 2, H - 2);
+
+  void season;
+}
+
+export const lectureHallKey = (state, side, season) => `lh-${state}-${side}-${season}`;

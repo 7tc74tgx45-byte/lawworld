@@ -63,12 +63,24 @@ function getLectureTopics(curriculum, moduleId) {
   return topics;
 }
 
-// Group topics by district
+// Group topics by district (for a single module)
 function groupByDistrict(topics) {
   const map = new Map();
   for (const t of topics) {
     if (!map.has(t.districtId)) map.set(t.districtId, { title: t.districtTitle, moduleTitle: t.moduleTitle, topics: [] });
     map.get(t.districtId).topics.push(t);
+  }
+  return map;
+}
+
+// Group topics by module, then district within each module (for the hub hall)
+function groupByModule(topics) {
+  const map = new Map();
+  for (const t of topics) {
+    if (!map.has(t.moduleId)) map.set(t.moduleId, { title: t.moduleTitle, districts: new Map() });
+    const mod = map.get(t.moduleId);
+    if (!mod.districts.has(t.districtId)) mod.districts.set(t.districtId, { title: t.districtTitle, topics: [] });
+    mod.districts.get(t.districtId).topics.push(t);
   }
   return map;
 }
@@ -325,55 +337,55 @@ export function openLecturePanel({ title, moduleId, curriculum }) {
 
   panel.append(el('p', 'lp-hall-intro', 'Choose a topic below. Your tutor will guide you through it with questions and explanations.'));
 
-  // Group by district
-  const grouped = groupByDistrict(topics);
+  /** Render a single topic row and attach click handler. */
+  function renderTopicRow(container, topic) {
+    const row = el('div', 'lp-topic-row');
+    const titleEl = el('strong', null, topic.title);
+    const vaultBadge = el('span', 'lp-vault-badge', topic.sourceFile ? '📄 Note' : '');
+    const btn = document.createElement('button');
+    btn.className = 'lp-study-btn';
+    btn.textContent = 'Study →';
+    row.append(titleEl, vaultBadge, btn);
+    container.append(row);
 
-  for (const [, group] of grouped) {
-    // Module label (shown if topics span multiple modules — normally filtered to one)
-    const distGroup = el('div', 'lp-district-group');
+    btn.addEventListener('click', async () => {
+      panel.innerHTML = '';
+      const loading = el('p', 'lp-hall-intro', 'Loading lecture notes…');
+      panel.append(loading);
+      let noteText = '';
+      if (vaultOnline && topic.sourceFile) {
+        try { noteText = await readNote(topic.sourceFile); } catch { /* general knowledge fallback */ }
+      }
+      await runLectureChat(panel, topic, noteText);
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'lp-close-btn lp-study-btn';
+      closeBtn.textContent = 'End session';
+      closeBtn.addEventListener('click', close);
+      panel.append(closeBtn);
+    });
+  }
 
-    const distLabel = el('p', 'lp-district-label', `${group.title}`);
-    distGroup.append(distLabel);
-
-    for (const topic of group.topics) {
-      const row = el('div', 'lp-topic-row');
-      const titleEl = el('strong', null, topic.title);
-
-      const vaultBadge = el('span', 'lp-vault-badge', topic.sourceFile ? '📄 Note' : '');
-
-      const btn = document.createElement('button');
-      btn.className = 'lp-study-btn';
-      btn.textContent = 'Study →';
-
-      row.append(titleEl, vaultBadge, btn);
-      distGroup.append(row);
-
-      btn.addEventListener('click', async () => {
-        panel.innerHTML = '';
-
-        const loading = el('p', 'lp-hall-intro', 'Loading lecture notes…');
-        panel.append(loading);
-
-        let noteText = '';
-        if (vaultOnline && topic.sourceFile) {
-          try {
-            noteText = await readNote(topic.sourceFile);
-          } catch {
-            // Tutor falls back to general knowledge
-          }
-        }
-
-        await runLectureChat(panel, topic, noteText);
-
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'lp-close-btn lp-study-btn';
-        closeBtn.textContent = 'End session';
-        closeBtn.addEventListener('click', close);
-        panel.append(closeBtn);
-      });
+  if (moduleId) {
+    // Single module: group only by district
+    const grouped = groupByDistrict(topics);
+    for (const [, group] of grouped) {
+      const distGroup = el('div', 'lp-district-group');
+      distGroup.append(el('p', 'lp-district-label', group.title));
+      for (const topic of group.topics) renderTopicRow(distGroup, topic);
+      panel.append(distGroup);
     }
-
-    panel.append(distGroup);
+  } else {
+    // Hub hall: group by module first, then district
+    const byModule = groupByModule(topics);
+    for (const [, mod] of byModule) {
+      panel.append(el('p', 'lp-module-heading', mod.title));
+      for (const [, dist] of mod.districts) {
+        const distGroup = el('div', 'lp-district-group');
+        distGroup.append(el('p', 'lp-district-label', dist.title));
+        for (const topic of dist.topics) renderTopicRow(distGroup, topic);
+        panel.append(distGroup);
+      }
+    }
   }
 
   const leaveBtn = document.createElement('button');
