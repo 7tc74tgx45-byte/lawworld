@@ -30,6 +30,7 @@ const VAULT_NOTES = new Set([
   'LAW7054-Tort-Ch8-Employers-Liability.md',
   'LAW7054-Tort-Lecture1-Trespass-to-Person-Handout.md',
   'LAW7054-Tort-W4-Breach-of-Duty-Brennan-Ch3.md',
+  'LAW7054-Tort-W4-Workshop-Prep.md',
   'LAW7055-Entrenchment-and-Manner-and-Form.md',
   'LAW7055-Stanton-Prescott-Ch1-UK-Constitution.md',
   'LAW7055-Stanton-Prescott-Ch2-Separation-of-Powers.md',

@@ -1,8 +1,11 @@
 import Phaser from 'phaser';
 import { openEncounter } from '../ui/encounter.js';
-import { openOverlay, setOverlayHandlers, isAnyOverlayOpen } from '../ui/dom.js';
+import { openOverlay, setOverlayHandlers, isAnyOverlayOpen, el as domEl, button as domBtn } from '../ui/dom.js';
 import { openSettings } from '../ui/settings.js';
 import { openDoorPanel } from '../ui/doorPanel.js';
+import { openWorkshopPanel } from '../ui/workshopPanel.js';
+import { openWorkshopEncounter } from '../ui/workshopEncounter.js';
+import { parseWorkshopNote } from '../logic/workshopParser.js';
 import { openJournal } from '../ui/journal.js';
 import { downloadSave, pickAndImportSave, getSaveStore } from '../ui/saveAdapter.js';
 import { createOfflineTutor } from '../api/offlineTutor.js';
@@ -10,7 +13,7 @@ import { createClaudeTutor } from '../api/tutor.js';
 import { writeSessionNote, loadPriorSessions } from '../api/sessionNotes.js';
 import { hasOfflineBank } from '../data/offlineBank.js';
 import { getClaudeKey } from '../api/claude.js';
-import { getObsidianConfig, listFiles as obsidianListFiles } from '../api/obsidian.js';
+import { getObsidianConfig, listFiles as obsidianListFiles, readNote } from '../api/obsidian.js';
 import { curriculum } from '../data/curriculum.js';
 import { allDistricts, findSubsection, locateSubsection } from '../logic/curriculum.js';
 import { computeStates, openGaps } from '../logic/progress.js';
@@ -287,6 +290,42 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
+  /** E at a Workshop building: load the prep note and open the workshop encounter. */
+  async interactWithWorkshop(b) {
+    const { token } = getObsidianConfig();
+    const vaultOnline = !!token;
+    openWorkshopPanel({
+      title: b.title,
+      workshopFile: b.workshopFile,
+      vaultOnline,
+      onStart: async () => {
+        if (!vaultOnline) return;
+        let parsed = null;
+        try {
+          const raw = await readNote(b.workshopFile);
+          parsed = parseWorkshopNote(raw);
+        } catch (err) {
+          console.warn('[Workshop] Failed to load note:', err);
+        }
+        if (!parsed) {
+          // Fallback: show a simple message overlay
+          const { panel, close } = openOverlay({ panelClass: 'small', onEscape: () => close() });
+          panel.append(domEl('p', 'lw-hint-note', `Could not load ${b.workshopFile}. Check Obsidian is open and the file exists.`));
+          panel.append(domBtn('Close', 'primary', close));
+          return;
+        }
+        openWorkshopEncounter({
+          title: parsed.title || b.title,
+          scenarios: parsed.scenarios,
+          flashCards: parsed.flashCards,
+          onClose: ({ completed } = {}) => {
+            if (completed) this.showBanner(`${b.title}: workshop complete!`);
+          },
+        });
+      },
+    });
+  }
+
   /** Spend region materials to light a district's brazier early (T21). Cosmetic: it unlocks and consolidates nothing. */
   lightBrazier(districtId) {
     const r = lightBrazierEarly(curriculum, this.saveStore.state, districtId);
@@ -517,7 +556,10 @@ export default class GameScene extends Phaser.Scene {
       const state = this.states[door.id] ?? 'locked';
       const label = state === 'locked' ? '🔒 Locked: press E to see what unlocks it' : `Press E to study (${STATE_LABEL[state]})`;
       this.prompt.setText(`${door.title}\n${label}`).setVisible(true);
-      if (Phaser.Input.Keyboard.JustDown(this.eKey) || Phaser.Input.Keyboard.JustDown(this.enterKey)) this.interactWithDoor(door);
+      if (Phaser.Input.Keyboard.JustDown(this.eKey) || Phaser.Input.Keyboard.JustDown(this.enterKey)) {
+        if (door.type === 'workshop') this.interactWithWorkshop(door);
+        else this.interactWithDoor(door);
+      }
     } else {
       this.prompt.setVisible(false);
     }

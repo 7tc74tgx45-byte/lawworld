@@ -90,4 +90,11 @@ export const tortDistricts = [
       ['defences', 'Defences: Volenti and Contributory Negligence', '7. Defences', ['volenti non fit injuria', 'contributory negligence'], ['Smith v Baker & Sons'], ['Law Reform (Contributory Negligence) Act 1945'], { pre: ['wilsons-clyde', 'tort-causation.nai'] }],
     ],
   }),
+  D({
+    id: 'tort-workshops', title: 'Workshop Prep', chapter: 'WS', sourceFile: 'LAW7054-Tort-W4-Workshop-Prep.md', after: [],
+    subs: [
+      ['w4', 'Workshop W4: Breach of Duty', 'Workshop Prep — W4', ['standard of care', 'breach', 'reasonable person'], [], [], { pre: [], type: 'workshop', workshopFile: 'LAW7054-Tort-W4-Workshop-Prep.md' }],
+    ],
+  }),
+
 ];

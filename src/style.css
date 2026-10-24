@@ -140,3 +140,15 @@
 .lw-tag { font-size: 11px; padding: 1px 8px; border-radius: 9px; background: #4a3d16; color: #ffe08a; }
 .lw-tag.consolidated { background: #1d4430; color: #b9f0cf; }
 @media (max-width: 700px) { .lw-stat { grid-template-columns: 120px 40px 1fr 50px; } }
+
+/* ── Workshop Prep encounter ─────────────────────────────────────────── T96 */
+.lw-ws-scenario { padding: 12px 16px; background: #0f1320; border: 1px solid #2d3a5a; border-radius: 6px; margin: 0 16px 10px; font-size: 14px; line-height: 1.55; color: #d0d8f0; white-space: pre-wrap; max-height: 180px; overflow-y: auto; }
+.lw-ws-textarea { width: calc(100% - 32px); margin: 0 16px 10px; display: block; background: #0f1320; color: #f0f2f8; border: 1px solid #3c4a73; border-radius: 6px; padding: 8px; font: 14px/1.4 system-ui, sans-serif; box-sizing: border-box; resize: vertical; min-height: 100px; }
+.lw-ws-textarea:focus { outline: 2px solid #5a7bd8; }
+.lw-ws-cols { display: flex; gap: 10px; padding: 0 16px 10px; flex-wrap: wrap; }
+.lw-ws-col { flex: 1 1 240px; min-width: 0; }
+.lw-ws-col-head { font-size: 12px; font-weight: 600; color: #7a85a5; margin: 0 0 4px; text-transform: uppercase; letter-spacing: .04em; }
+.lw-ws-answer { background: #0f1320; border: 1px solid #2d3a5a; border-radius: 6px; padding: 8px; font: 13px/1.5 system-ui, sans-serif; color: #d0d8f0; white-space: pre-wrap; word-break: break-word; max-height: 240px; overflow-y: auto; margin: 0; }
+.lw-ws-answer--model { border-color: #3c5a3c; background: #0d1a0d; color: #c8e6c8; }
+.lw-ws-rating { display: flex; gap: 8px; padding: 0 16px 10px; flex-wrap: wrap; }
+.lw-ws-flashcard { margin: 16px 16px 10px; padding: 24px 16px; background: #0f1320; border: 1px solid #3c4a73; border-radius: 10px; font-size: 16px; text-align: center; color: #e6e9f2; min-height: 60px; display: flex; align-items: center; justify-content: center; white-space: pre-wrap; }

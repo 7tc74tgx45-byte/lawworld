@@ -37,6 +37,8 @@ export function makeDistrict(spec) {
       statutes,
       prerequisites,
       suggestedTutor: opts.tutor || tutor,
+      ...(opts.type ? { type: opts.type } : {}),
+      ...(opts.workshopFile ? { workshopFile: opts.workshopFile } : {}),
     });
   });
   return { id, title, chapter, sourceFile, source, subsections };
