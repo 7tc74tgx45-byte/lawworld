@@ -685,6 +685,7 @@ Start by reading the files you need."""
                 break
             verify_fails += 1
             log(f"{tid}: verification failed ({verify_fails})")
+            (REPO / "agent" / "last-failure.log").write_text(f"# {tid} verify fail {verify_fails}\n\n" + report)
             if verify_fails > 2 or finish.input.get("status") == "blocked":
                 outcome = ("broken", finish.input)
                 break
