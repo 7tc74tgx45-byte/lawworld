@@ -198,25 +198,6 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Tests: `resultCardModel` for consolidated, explored and left-early results (no stage reported as answered that wasn't); reward lines match the real rewards; the card never shows a verdict the engine did not give.
   - Done when: `npm run build` and `npm test` pass; finishing an encounter in a dev run shows the chips and rewards, and a consolidated building visibly pulses and lights its brazier (if the district is complete) on return to the world.
 
-- [ ] **T94 — Player house with sleep / save ceremony**
-  - Why: the autosave already works silently, but sleeping gives a satisfying ritual endpoint to a study session — a day summary screen, a sense of progress, and an obvious "I'm done for now" moment. Good for habit-building.
-  - A small house structure placed in the hub area with a bed inside (accessible via a door). Entering and pressing E/Enter on the bed opens a "Sleep" overlay.
-  - Sleep overlay shows: today's date, subsections studied, cases mastered, seeds planted, XP gained this session. A "Sleep until morning" button flushes the autosave explicitly and closes with a short fade to black.
-  - On wake, a brief "Good morning" message with the current date. No functional game time system needed — purely cosmetic / ceremonial.
-  - The house interior is a tiny Phaser scene (or same scene, different room area) with a bed, bookshelf, desk — cosy study digs aesthetic.
-  - Tests: flush is called on sleep; overlay shows correct session stats; nothing breaks if session log is empty.
-  - Done when: player can walk into house, press E on bed, see summary, press sleep, get fade-out, and game is saved.
-
-- [ ] **T95 — World map overlay (M key)**
-  - Why: as the world grows (more law modules, more districts) it becomes hard to navigate without a birds-eye view. A map also makes the game feel like a proper RPG.
-  - Press M to toggle a full-screen map overlay drawn on a canvas element over the Phaser canvas.
-  - Map shows: all districts as labelled rectangles (colour-coded by module — Contract = blue, Tort = green, Criminal = red, Public Law = purple), the player's current position as a pulsing dot, consolidated districts with a gold border, unexplored ones in grey.
-  - Each district is clickable: clicking opens a tooltip with district name, subsection count, how many consolidated.
-  - Map data comes from the existing `buildWorld` curriculum — no new data source needed.
-  - M key closes the map; clicking outside a district also closes it.
-  - Tests: map renders without crashing when curriculum is empty; player dot updates on next open; clicking a district shows correct stats.
-  - Done when: pressing M in the game shows a clear, readable world map with at least the main Contract and Tort regions visible and correctly labelled.
-
 - [ ] **T96 — Workshop buildings (problem question practice from Obsidian notes)**
   - Why: Fynn has real workshop prep notes in the vault (e.g. `LAW7054-Tort-W4-Workshop-Prep.md`) with structured scenarios and IRAC model answers. A Workshop building in each law district lets him practice problem questions in-game, either prepping before the real session or reviewing after.
   - Note format (already in vault, parse as-is):
@@ -238,3 +219,22 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Offline: if Obsidian is unreachable, the door shows "Vault offline — connect Obsidian to access workshops." No crash, no empty screen.
   - Tests: scenario parser extracts correct text and model answer for each `## Scenario` block; `## Things to Know Cold` items parse correctly; week sorter orders W1–W9 correctly; offline path shows the right message and does not attempt a fetch; completing all scenarios in a week marks it done.
   - Done when: `npm run build` and `npm test` pass; with the Tort W4 workshop note in the vault, the Workshop building in the Tort district shows W4, entering runs through both Maria/Bill and Angela/Andy/Mike/Rajinder scenarios with tutor feedback, and the Things to Know Cold flash cards fire at the end.
+
+- [ ] **T94 — Player house with sleep / save ceremony**
+  - Why: the autosave already works silently, but sleeping gives a satisfying ritual endpoint to a study session — a day summary screen, a sense of progress, and an obvious "I'm done for now" moment. Good for habit-building.
+  - A small house structure placed in the hub area with a bed inside (accessible via a door). Entering and pressing E/Enter on the bed opens a "Sleep" overlay.
+  - Sleep overlay shows: today's date, subsections studied, cases mastered, seeds planted, XP gained this session. A "Sleep until morning" button flushes the autosave explicitly and closes with a short fade to black.
+  - On wake, a brief "Good morning" message with the current date. No functional game time system needed — purely cosmetic / ceremonial.
+  - The house interior is a tiny Phaser scene (or same scene, different room area) with a bed, bookshelf, desk — cosy study digs aesthetic.
+  - Tests: flush is called on sleep; overlay shows correct session stats; nothing breaks if session log is empty.
+  - Done when: player can walk into house, press E on bed, see summary, press sleep, get fade-out, and game is saved.
+
+- [ ] **T95 — World map overlay (M key)**
+  - Why: as the world grows (more law modules, more districts) it becomes hard to navigate without a birds-eye view. A map also makes the game feel like a proper RPG.
+  - Press M to toggle a full-screen map overlay drawn on a canvas element over the Phaser canvas.
+  - Map shows: all districts as labelled rectangles (colour-coded by module — Contract = blue, Tort = green, Criminal = red, Public Law = purple), the player's current position as a pulsing dot, consolidated districts with a gold border, unexplored ones in grey.
+  - Each district is clickable: clicking opens a tooltip with district name, subsection count, how many consolidated.
+  - Map data comes from the existing `buildWorld` curriculum — no new data source needed.
+  - M key closes the map; clicking outside a district also closes it.
+  - Tests: map renders without crashing when curriculum is empty; player dot updates on next open; clicking a district shows correct stats.
+  - Done when: pressing M in the game shows a clear, readable world map with at least the main Contract and Tort regions visible and correctly labelled.
