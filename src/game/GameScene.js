@@ -135,7 +135,7 @@ export default class GameScene extends Phaser.Scene {
     const kb = this.input.keyboard;
     if (open) {
       kb.enabled = false;
-      kb.removeAllCaptures();
+      if (kb.removeAllCaptures) kb.removeAllCaptures(); else kb.clearCaptures && kb.clearCaptures();
       kb.resetKeys();
       this.player.setVelocity(0, 0);
     } else {
