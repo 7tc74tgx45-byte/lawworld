@@ -123,7 +123,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - No external files, no network requests.
   - Done when music plays in browser and changes on region cross and encounter open.
 
-- [ ] **T16 — Dialogue portraits (canvas-generated)**
+- [x] **T16 — Dialogue portraits (canvas-generated)**
   - Create `src/ui/portraits.js`: draw pixel-art tutor portraits on an `OffscreenCanvas` (64×64px), return as `ImageBitmap`.
   - Professor Hale: silver hair, round glasses, dark green robes, warm skin tone — Contract Law.
   - Dr Okafor: close-cropped hair, sharp jaw, deep purple robes — Tort Law.

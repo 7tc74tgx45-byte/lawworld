@@ -897,3 +897,35 @@ Cost $0.89 · 6 min · attempt 1
 - **Overlay audio:** the music keeps playing when the journal or menu is open. Only encounters and client conversations switch to the tension track. That seemed right, since the tension track is meant to mark study time.
 
 **Next:** T16 and T17 (portraits and transitions) can follow. T17 should call `music.playRegion` from its midpoint callback if it wants the crossfade aligned with the screen fade. T18 (sound effects) should share the same AudioContext, or at least respect `musicMuted`.
+
+## T16 — done — 2026-10-24 04:45:10
+Cost $0.62 · 5 min · attempt 1
+
+**What changed:** The encounter panel now shows a 64×64 pixel-art portrait beside the tutor's name, and it changes when the tutor changes (for example on "Continue offline"). Build and all 259 tests pass. I haven't seen the portraits in a browser; that check is below.
+
+**What I added**
+- `src/logic/portraits.js` holds the portraits as plain data: a palette plus a list of rectangles for each tutor. Keeping them as data lets Node tests check the bounds and colour counts.
+- `src/ui/portraits.js` paints each design with `ctx.fillRect` only, on an `OffscreenCanvas`, and caches it as an `ImageBitmap`. It falls back to a normal canvas if `OffscreenCanvas` isn't available.
+- `getPortrait(tutorId)` returns a fresh 64×64 `<canvas>` and draws that bitmap onto it.
+- `src/ui/encounter.js` puts that canvas in the header, framed in the tutor's colour. It replaces the old colour swatch and is redrawn whenever `paintTutor()` runs.
+- `tests/portraits.test.js` checks:
+  - every rectangle is inside the 64×64 canvas;
+  - each portrait uses between 17 and 30 colours;
+  - the designs are all different;
+  - the robe colours are all different;
+  - an unknown tutor falls back to Dr Chen.
+
+**The four portraits**
+- **Professor Hale:** silver hair and moustache, round gold glasses, dark green robes.
+- **Ms Okafor:** close-cropped hair, a sharp jaw, deep purple robes.
+- **Ms Patel:** long dark braid over the shoulder, red and gold robes, half-moon reading glasses.
+- **Dr Chen:** warm, with a seminar lanyard, in violet. I added this one because Chen is the default first-pass tutor.
+
+**Try it:** Run `npm run dev`, walk to a building and press E, then pick a tutor. The pixel portrait should sit at the left of the encounter header, framed in the tutor's colour. Open buildings with Hale, Okafor and Chen to compare them. To see the portrait swap, start an online encounter and let it fail so that "Continue offline" appears. Ms Patel's portrait is drawn, but nothing shows it yet.
+
+**Design notes:** - **Task and repo disagree on the cast.** The task describes Hale as Contract, "Dr Okafor" as Tort, and an Ms Patel for Public Law. The repo, following VISION §3, has Professor Hale (Socratic), Ms Okafor (Solicitor) and Dr Chen (Seminar lead), and no Patel. The portraits follow the task's visual descriptions, but are keyed by persona id (`hale`, `okafor`, `chen`). I didn't rename personas or invent a fourth tutor, because VISION is the source of truth. `patel` is a ready-made portrait. To use it, add a persona with id `patel`, or tell me if you want Chen replaced.
+- **Colour count.** Each portrait uses roughly 20 to 25 colours, which is close to the "~20" in the brief. It is a 64×64 canvas, but the large shapes sit on a 2px grid rather than a strict 8px one. An 8px grid is too coarse for a face with glasses, so I used 2px.
+- **Not checked by eye.** I tested the portrait data, but I haven't seen the portraits rendered. If a feature looks off, the fix is one rectangle in `src/logic/portraits.js`.
+- **Client encounters.** The client-case overlay (`src/ui/clientEncounter.js`) still shows its colour swatch; this task covered only the main encounter panel.
+
+**Next:** Show the tutor portrait in the door panel's tutor picker and in the client overlay. Move on to T17 (transitions) and T18 (sound effects).

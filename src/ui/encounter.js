@@ -11,6 +11,7 @@ import { createEncounter, STAGES } from '../logic/encounter.js';
 import { describeError } from '../logic/apiErrors.js';
 import { viewState, messageView, pipStates } from '../logic/encounterView.js';
 import { openOverlay, el, button } from './dom.js';
+import { getPortrait } from './portraits.js';
 
 let active = null;
 
@@ -39,14 +40,15 @@ export function openEncounter({ subsection, tutor, priorGaps, loadMemory, onOpen
 
   // ---- header: portrait swatch, tutor name, title, offline badge
   const head = el('div', 'lw-head');
-  const sw = el('div', 'lw-swatch');
+  const portraitHolder = el('div', 'lw-portrait-frame'); // the frame border carries the tutor colour
   const tutorLabel = el('div', 'lw-tutor');
   const badge = el('div', 'lw-badge');
-  head.append(sw, tutorLabel, el('div', 'lw-title', `${subsection.module ?? ''}: ${subsection.title}`), badge);
+  head.append(portraitHolder, tutorLabel, el('div', 'lw-title', `${subsection.module ?? ''}: ${subsection.title}`), badge);
   const paintTutor = () => {
     const c = tutor.colour ?? '#c9a227';
     panel.style.setProperty('--tc', c);
-    sw.style.background = c;
+    portraitHolder.textContent = '';
+    portraitHolder.append(getPortrait(tutor.id)); // swaps with the tutor (e.g. Continue offline)
     tutorLabel.textContent = tutor.name;
     badge.textContent = tutor.offline ? 'OFFLINE MODE: built-in question bank' : 'ONLINE: Claude reading your note';
     badge.className = 'lw-badge' + (tutor.offline ? '' : ' online');
