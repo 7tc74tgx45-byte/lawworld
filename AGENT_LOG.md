@@ -108,3 +108,58 @@ Cost $0.27 · 2 min · attempt 1
 - **Vault is flat:** the write guard allows only vault-root session notes, which matches that.
 
 **Next:** T02 should generate the curriculum from the vault. T05 should promote the encounter engine and add `priorGaps` plus mock-tutor tests. T07 should add the Settings overlay and use `testConnection()`.
+
+## T02 — partial — 2026-10-24 01:08:32
+Cost $2.17 · 16 min · attempt 1
+
+**What changed:** The curriculum now exists in `src/data/curriculum.js` and is built from the live vault headings. `npm run build` passes and all 30 tests pass (10 new ones in `tests/curriculum.test.js`).
+
+It has four modules, each with one region and a season: Foundations (spring), Contract (summer), Tort (autumn) and Public Law (winter). There are about 45 districts, one per chapter or lecture note, and well over 150 subsections. Every subsection has an `id`, `title`, `sourceFile`, `heading`, `keyConcepts`, `keyCases`, `statutes`, `prerequisites` and `suggestedTutor`. Every district has `source: "vault"`, so the fallback path was not needed.
+
+**It is partial because:**
+- I did not cover some notes. See the first two items under design notes.
+- I did not re-open the vault to check each heading string against the real note. I took them from the outlines, so the T06 section extractor may find a few that don't match.
+
+**How it is organised:**
+- The Foundations, Contract, Tort and Public Law subsections are in `src/data/curriculum/` (`foundations.js`, `contract.js`, `tort.js`, `publicLaw.js`).
+- `src/logic/curriculum.js` is pure. It has `makeDistrict`, `flattenSubsections`, `findSubsection`, `findCycle` and `topologicalOrder`.
+- Only short lists were taken (concepts, case names, statutes). No note prose was copied.
+
+**Prerequisites** follow VISION §2 and cross district boundaries:
+- Contract: Agreement → Consideration → Promissory Estoppel → Intention → Terms → Mistake.
+- Tort: Duty of Care (Caparo) → Breach → Causation and Remoteness → Employers' Liability defences. Psychiatric Harm sits after Duty.
+- Public Law: Constitution → Separation of Powers → Rule of Law → Sovereignty → HRA, with Entrenchment after Sovereignty.
+- Foundations: What is Law → Precedent → Statutory Interpretation → Judiciary → Personnel.
+- The tests check each region has an entry subsection with no prerequisites. They also check ids are unique, prerequisites exist, there are no cycles, and `sourceFile` and `heading` are set on every subsection.
+
+**Try it:** Run `npm test` and look at the "curriculum" and "VISION §2 ordering" tests. To browse it, import `curriculum` from `src/data/curriculum.js`. Nothing is shown in the browser yet. The map arrives in T09.
+
+**Design notes:** - **Occupiers' Liability is missing.** VISION §2 lists it after Breach, but the vault has no occupiers' liability note, so I did not invent one. The 1957 and 1984 Acts do not appear in the curriculum. A note for it would need adding to the vault. There is a comment in `tort.js`.
+- **No judicial review district.** The vault has no standalone JR note, so JR appears only as `pl-rule-of-law.rol-and-executive`. That subsection sits between Rule of Law and HRA, and I did not add JR cases of my own.
+- **Cross-district prerequisites:** I added a few dependencies beyond the bare VISION chain, such as Interpretation after Precedent and Legislation. Please check them for sense.
+- **Skipped notes:** The 'districts' rule excludes cheat sheets, indexes, `TUTOR-SESSION-*` notes and `LAW7054-Formative-HighTec-IRAC-Scaffold.md`. I also skipped several duplicate or overlapping notes, since each chapter has one canonical district. These were not mapped:
+  - Ch5 `-v1` and the Ch5 workshop prep
+  - the combined Ch2–3 note
+  - the three Consideration summary and reading-note files
+  - the Poole casebook files
+  - the Tort W2, W4 and W5 workshop and problem notes
+  - the Week 3 Breach lecture and the Duty/Psychiatric workshop
+  - the W4 Causation lecture and cases notes
+  - `LAW7055-Parliamentary-Sovereignty-Notes.md`
+  - `LAW7055-W3-Parliamentary-Supremacy-HRA.md`
+  - `LAW7055-Fictitious-Bills-Advisory.md`
+  - `LAW7055-Workshop*` notes
+  - `LAW7054-Contract-W3-Workshop-Certainty-Intention-Mistake.md`, the Contract Ch1–Ch2 reading notes and the Dissertation note
+  - `LAW7053-Legal-Problem-Questions-Essay-Writing.md`
+  - `LAW7053-ECA-1972-vs-HRA-1998-Parliamentary-Supremacy.md`
+
+  Some of these could become extra subsections or extra context for the tutor later.
+- **Heading strings** came from outlines, and some are long or carry markdown, like `*Res Ipsa Loquitur*` and `# Chapter 1 — …`. T06's `extractSection` should match headings case-insensitively and ignore emphasis markers. The Bingham sections use `#` headings (level 1) rather than `##`.
+- **Tutors:** suggested tutors are set per region: Okafor for Contract and Tort, Hale for Public Law and Judiciary independence, and Chen for Foundations and entry chapters.
+- **Old demo id:** `contract-offer-acceptance` (the T00 demo) is not in the curriculum. The nearest subsections are `contract-agreement.offer-vs-itt` and `contract-agreement.acceptance`. T06's bank will need to be keyed to the new ids.
+- **Legal accuracy:** In the Public Law file, `s.4` is described as a declaration that does not strike down a statute, which is the standard position. The extracted statute names keep the vault's spelling, apart from tidying a few truncated ones such as "Law of Property (Miscellaneous Provisions) Act 1989".
+
+**Next:** T03 can use `flattenSubsections`, `subsectionIndex` and the prerequisite lists for gating.
+T06 needs offline bank entries keyed to the new ids: the first three Contract subsections (`contract-intro.what-is-contract`, `contract-agreement.objective-approach`, `contract-agreement.offer-and-acceptance` / `offer-vs-itt`) and the first Tort one (`tort-trespass.assault` or `tort-duty.introduction`).
+Decide whether to add Occupiers' Liability and Judicial Review notes to the vault and regenerate.
+If you want more depth, map the skipped workshop and lecture notes as extra subsections.
