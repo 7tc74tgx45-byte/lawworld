@@ -838,3 +838,14 @@ The `looksLikeKeywordList` check is a heuristic: it flags text where commas and 
 The offline keyword evaluator is inherently weak. T19 adds wrong-conclusion detection but won't make it equal to Claude's judgement. Offline seeds and consolidations are weaker evidence than online ones.
 
 **Next:** Do T19 and T20 first. They cover the offline evaluation and gap logging, prompt injection, saving progress on tab close, and seed farming. T21 and T22 follow. Then play the game in a browser and check the garden overlay layout, the brazier glow position and the plot positions. The report lists these as unverified.
+
+## T14 — partial — 2026-10-24 04:33:43
+Cost $1.35 · 4 min · attempt 2
+
+**What changed:** Stopped at a limit before finish_task.
+
+**Try it:** —
+
+**Design notes:** —
+
+**Next:** Continue this task.

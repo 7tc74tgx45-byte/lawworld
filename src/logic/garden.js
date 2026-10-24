@@ -31,6 +31,18 @@ export function seedsFromResult(result) {
   return [2, 3, 4, 5].filter((n) => result.stages[n]?.answered && result.stages[n].verdict === 'solid').length;
 }
 
+/** At most this many seeds per subsection per calendar day: replaying one building cannot farm seeds (QA finding). */
+export const MAX_SEEDS_PER_SUBSECTION_PER_DAY = 4;
+
+/** Seeds this result may actually pay, given the sessions already logged (each records the seeds it paid). */
+export function seedsAllowed(result, sessions = [], now) {
+  const day = iso(now).slice(0, 10);
+  const already = (sessions ?? [])
+    .filter((s) => s.subsectionId === result?.subsectionId && typeof s.date === 'string' && s.date.slice(0, 10) === day)
+    .reduce((n, s) => n + (s.seeds ?? 0), 0);
+  return Math.max(0, Math.min(seedsFromResult(result), MAX_SEEDS_PER_SUBSECTION_PER_DAY - already));
+}
+
 export const gardenOf = (save) => (Array.isArray(save?.garden?.plots) ? save.garden.plots : []);
 
 /** 'withered' when unwatered for WITHER_DAYS in-game days, else 'growing' (or 'grown' at the top stage). */

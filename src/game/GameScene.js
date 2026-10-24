@@ -264,7 +264,11 @@ export default class GameScene extends Phaser.Scene {
     const hasObsidian = !!getObsidianConfig().token;
     this.encounterOpen = true;
     let recorded = false;
-    openEncounter({
+    // A closed tab must keep evaluated progress like the Leave button does (VISION §1.2).
+    let handle = null;
+    const onPageHide = () => { if (this.encounterOpen) handle?.close(); };
+    window.addEventListener('pagehide', onPageHide);
+    handle = openEncounter({
       subsection: sub,
       tutor,
       makeOfflineTutor: bank ? makeOfflineTutor : undefined,
@@ -279,6 +283,7 @@ export default class GameScene extends Phaser.Scene {
       },
       onClose: (res) => {
         this.encounterOpen = false;
+        window.removeEventListener('pagehide', onPageHide);
         if (!recorded) this.recordEncounter(sub, res);
       },
     });

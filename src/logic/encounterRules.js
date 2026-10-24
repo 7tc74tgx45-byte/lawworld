@@ -13,6 +13,7 @@ export const STAGES = [
 
 export const MIN_EXCHANGES = 8;
 export const MIN_ANSWER_CHARS = 15;
+export const MIN_QUESTION_CHARS = 5; // a short real question ("what is a bailment?") is fine; only answers need 15
 export const MAX_FOLLOWUPS = 2;
 export const MAX_HINTS = 2;
 export const CHECKPOINT_QUESTIONS = 3;

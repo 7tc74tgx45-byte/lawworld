@@ -9,7 +9,7 @@ import { retrievalTargets, plotStatus, plantSeed, waterPlot, dampRemainingMs, ga
 import { retrievalQuestion, evaluateRetrievalOffline, retrievalHint } from '../logic/retrieval.js';
 import { findSubsection } from '../logic/curriculum.js';
 import { describeError } from '../logic/apiErrors.js';
-import { MIN_ANSWER_CHARS } from '../logic/encounterRules.js';
+import { MIN_ANSWER_CHARS, MIN_QUESTION_CHARS } from '../logic/encounterRules.js';
 
 export function openGarden({ plotId, getSave, curriculum, makeTutor, update, onDone }) {
   const { panel, close } = openOverlay({ panelClass: 'medium', onEscape: () => close() });
@@ -100,7 +100,7 @@ export function openGarden({ plotId, getSave, curriculum, makeTutor, update, onD
 
     async function ask() {
       const q = ta.value.trim();
-      if (q.length < MIN_ANSWER_CHARS) { log.textContent = 'Type your question in the box first, then press Ask. It will not count as your answer.'; return; }
+      if (q.length < MIN_QUESTION_CHARS) { log.textContent = 'Type your question in the box first, then press Ask. It will not count as your answer.'; return; }
       lock(true);
       log.textContent = 'Asking...';
       try {

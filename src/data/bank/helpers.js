@@ -16,6 +16,7 @@ export const caseConcept = (c, label, extraRx = []) => ({ id: c.id, label, caseN
 export function conceptStage({ prompt, modelAnswer, hints, concepts, solidAt = 0.75, partialAt = 0.45, requiredIds = [], cases = [], followUp }) {
   return {
     prompt, modelAnswer, hints, cases,
+    conceptLabels: concepts.map((c) => c.label),
     evaluation: (answer) => evaluateByConcepts(answer, { concepts, solidAt, partialAt, requiredIds, followUp }),
   };
 }
@@ -27,6 +28,7 @@ export function conceptStage({ prompt, modelAnswer, hints, concepts, solidAt = 0
 export function authorityStage({ prompt, modelAnswer, hints, cases, noCaseHelp }) {
   return {
     prompt, modelAnswer, hints, cases: caseInfo(...cases.slice(0, 4)),
+      conceptLabels: ['name an authority', 'the key facts', 'the rule or ratio', 'why the case matters'],
     evaluation(answer) {
       const named = cases.filter((c) => c.nameRx.some((r) => new RegExp(r, 'i').test(answer)));
       if (!named.length) {
@@ -60,6 +62,7 @@ export function authorityStage({ prompt, modelAnswer, hints, cases, noCaseHelp }
 export function applicationStage({ prompt, modelAnswer, hints, concepts, requiredIds = [], cases = [], solidAt = 0.75, partialAt = 0.4, followUp }) {
   return {
     prompt, modelAnswer, hints, cases,
+    conceptLabels: concepts.map((c) => c.label),
     evaluation(answer) {
       const irac = iracScore(answer);
       const ev = evaluateByConcepts(answer, { concepts, solidAt, partialAt, requiredIds, followUp });

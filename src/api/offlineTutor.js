@@ -115,7 +115,7 @@ export function createOfflineTutor(opts = {}) {
       const names = (st.cases ?? []).map((c) => `${c.name}: ${c.ratio}`).join('\n');
       return {
         explanation: `${st.modelAnswer}${names ? '\n' + names : ''}`,
-        concepts: ctx.subsection.keyConcepts,
+        concepts: (st.conceptLabels?.length ? st.conceptLabels : ctx.subsection.keyConcepts).slice(0, 5),
       };
     },
 

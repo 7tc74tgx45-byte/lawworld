@@ -23,6 +23,7 @@ function cleanSession(s) {
     finished: !!s.finished,
     exchanges: Math.max(0, Math.floor(Number.isFinite(+s.exchanges) ? +s.exchanges : 0)),
     gaps: Math.max(0, Math.floor(Number.isFinite(+s.gaps) ? +s.gaps : 0)),
+    seeds: Math.max(0, Math.floor(Number.isFinite(+s.seeds) ? +s.seeds : 0)),
     gapConcepts: Array.isArray(s.gapConcepts) ? s.gapConcepts.filter((c) => typeof c === 'string' && c).slice(0, 6).map((c) => c.slice(0, 120)) : [],
   };
 }
@@ -34,7 +35,7 @@ export function normaliseSessions(list) {
 }
 
 /** Append one encounter to the log. `outcome` is the *recomputed* outcome (never the engine's claim). */
-export function recordSession(sessions, result, { subsection, outcome, now } = {}) {
+export function recordSession(sessions, result, { subsection, outcome, now, seeds = 0 } = {}) {
   const id = result?.subsectionId;
   if (!id) return sessions;
   const date = (now === undefined ? new Date() : new Date(now)).toISOString();
@@ -49,6 +50,7 @@ export function recordSession(sessions, result, { subsection, outcome, now } = {
     finished: !!result.finished,
     exchanges: result.exchanges ?? 0,
     gaps: gapConcepts.length,
+    seeds,
     gapConcepts,
   });
   return entry ? normaliseSessions([...sessions, entry]) : sessions;
