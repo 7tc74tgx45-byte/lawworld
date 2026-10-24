@@ -90,12 +90,14 @@ export default class GameScene extends Phaser.Scene {
       right: Phaser.Input.Keyboard.KeyCodes.D,
     });
     this.eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+    this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+    this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
     this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
     this.captureCodes = [
       Phaser.Input.Keyboard.KeyCodes.W, Phaser.Input.Keyboard.KeyCodes.A, Phaser.Input.Keyboard.KeyCodes.S, Phaser.Input.Keyboard.KeyCodes.D,
       Phaser.Input.Keyboard.KeyCodes.UP, Phaser.Input.Keyboard.KeyCodes.DOWN, Phaser.Input.Keyboard.KeyCodes.LEFT, Phaser.Input.Keyboard.KeyCodes.RIGHT,
-      Phaser.Input.Keyboard.KeyCodes.SPACE, Phaser.Input.Keyboard.KeyCodes.E, Phaser.Input.Keyboard.KeyCodes.TAB,
+      Phaser.Input.Keyboard.KeyCodes.SPACE, Phaser.Input.Keyboard.KeyCodes.E, Phaser.Input.Keyboard.KeyCodes.ENTER, Phaser.Input.Keyboard.KeyCodes.SHIFT, Phaser.Input.Keyboard.KeyCodes.TAB,
     ];
 
     this.encounterOpen = false;
@@ -468,7 +470,8 @@ export default class GameScene extends Phaser.Scene {
       this.facing = facingFromVector(vx, vy, this.facing);
       const before = { x: this.player.x, y: this.player.y };
       // small sub-steps so a slow frame can never skip over a wall
-      const dist = (PLAYER_SPEED * Math.min(delta, 50)) / 1000;
+      const running = this.shiftKey.isDown;
+      const dist = (PLAYER_SPEED * (running ? 2.2 : 1) * Math.min(delta, 50)) / 1000;
       const steps = Math.ceil(dist / 4);
       for (let i = 0; i < steps; i++) {
         const p = moveWithCollision(this.world, this.player.x, this.player.y, (vx * dist) / steps, (vy * dist) / steps);
@@ -493,21 +496,21 @@ export default class GameScene extends Phaser.Scene {
     if (near) {
       const n = near.npc;
       this.prompt.setText(`${n.name} has a problem${n.hasGap ? ' (something you missed before)' : ''}\nPress E to hear it · ${n.subsection.title}`).setVisible(true);
-      if (Phaser.Input.Keyboard.JustDown(this.eKey)) startClientCase(this, n);
+      if (Phaser.Input.Keyboard.JustDown(this.eKey) || Phaser.Input.Keyboard.JustDown(this.enterKey)) startClientCase(this, n);
       return;
     }
     const door = doorNear(this.world, this.player.x, this.player.y, this.facing);
     const plot = !door && this.garden.nearest(this.player.x, this.player.y);
     if (plot) {
       this.prompt.setText(`${this.plotPrompt(plot.view)}`).setVisible(true);
-      if (Phaser.Input.Keyboard.JustDown(this.eKey)) this.openGardenPlot(plot.plotId);
+      if (Phaser.Input.Keyboard.JustDown(this.eKey) || Phaser.Input.Keyboard.JustDown(this.enterKey)) this.openGardenPlot(plot.plotId);
       return;
     }
     if (door) {
       const state = this.states[door.id] ?? 'locked';
       const label = state === 'locked' ? '🔒 Locked: press E to see what unlocks it' : `Press E to study (${STATE_LABEL[state]})`;
       this.prompt.setText(`${door.title}\n${label}`).setVisible(true);
-      if (Phaser.Input.Keyboard.JustDown(this.eKey)) this.interactWithDoor(door);
+      if (Phaser.Input.Keyboard.JustDown(this.eKey) || Phaser.Input.Keyboard.JustDown(this.enterKey)) this.interactWithDoor(door);
     } else {
       this.prompt.setVisible(false);
     }
