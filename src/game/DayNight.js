@@ -21,16 +21,16 @@
 
 const BANDS = [
   // [ hour_float, colour_hex, alpha ]
-  [0.0,  0x0a0820, 0.62],  // midnight
-  [5.0,  0x0a0820, 0.62],  // pre-dawn still dark
+  [0.0,  0x0a0820, 0.38],  // midnight
+  [5.0,  0x0a0820, 0.38],  // pre-dawn still dark
   [6.0,  0x1a1040, 0.28],  // dawn twilight — violet
   [7.0,  0xffffff, 0.00],  // full daylight
   [17.0, 0xffffff, 0.00],  // still day
   [18.0, 0xff9040, 0.10],  // golden hour begins
   [19.0, 0xff6020, 0.22],  // sunset orange
-  [20.0, 0x301860, 0.44],  // blue hour / dusk
-  [21.5, 0x0a0820, 0.62],  // night proper
-  [24.0, 0x0a0820, 0.62],  // wrap
+  [20.0, 0x301860, 0.32],  // blue hour / dusk
+  [21.5, 0x0a0820, 0.38],  // night proper
+  [24.0, 0x0a0820, 0.38],  // wrap
 ];
 
 /** Linear interpolation */
