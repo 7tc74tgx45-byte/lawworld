@@ -174,3 +174,39 @@ Cost $0.74 · 3 min · attempt 2
 **Design notes:** —
 
 **Next:** Continue this task.
+
+## T02 — done — 2026-10-24 01:22:56
+Cost $0.18 · 1 min · attempt 1
+
+**What changed:** The curriculum is generated from the vault and was already in the repo from earlier T02 attempts. This session I checked it and ticked T02 in TASKS.md. `npm run build` and `npm test` both pass (35 tests). I changed no code this session, so the vault was not re-read. I only re-checked the file list and one outline, and the curriculum matches them.
+
+`src/data/curriculum.js` assembles four regions from `src/data/curriculum/*.js`, built with the pure helpers in `src/logic/curriculum.js`:
+- Foundations (spring)
+- Contract (summer)
+- Tort (autumn)
+- Public Law (winter, including `Bingham - Rule of Law.md`)
+
+Every district is flagged `source: "vault"` because the vault was reachable.
+
+Each district is one chapter or lecture note. Each subsection has an id, title, `sourceFile`, heading, key concepts, key cases, statutes, prerequisites and a suggested tutor. All lists are short extracts, with no note prose copied.
+
+The tests check:
+- Ids are unique.
+- Every prerequisite exists.
+- There are no cycles.
+- Every subsection has a `sourceFile` and a `heading`.
+- Each region has at least one entry subsection with no prerequisites.
+- The VISION §2 ordering holds, for example Offer & Acceptance before Consideration and Duty before Breach.
+- Every district points at a real vault note.
+- No two subsections share a heading within a note.
+
+**Try it:** Run `npm test` and look at the "curriculum", "VISION §2 ordering" and vault-note tests. Nothing shows in the browser yet. The map arrives in T09.
+
+**Design notes:** - **Occupiers' Liability is missing.** VISION §2 lists it, but the vault has no note for it, so I did not invent one. The 1957 and 1984 Acts are absent from the curriculum. A comment in `tort.js` records this. Adding a note to the vault would let the curriculum be regenerated with it.
+- **No Judicial Review district.** The vault has no standalone JR note. JR appears only as a subsection inside the Rule of Law chapter, and I added no JR cases of my own.
+- **Skipped notes.** I did not map the duplicate or overlapping notes, such as the Ch5 `-v1`, the combined Ch2–3 note, the Poole casebooks, the workshop and problem notes, `LAW7055-Parliamentary-Sovereignty-Notes.md` and `LAW7055-W3-Parliamentary-Supremacy-HRA.md`. I also skipped the cheat sheets, indexes, `TUTOR-SESSION-*` notes and the HighTec IRAC scaffold. They could become extra subsections or tutor context later.
+- **Heading strings.** Some come straight from the outlines and carry markdown, such as `*Res Ipsa Loquitur*`. The Bingham headings are level 1 (`#`). T06's `extractSection` should match headings case-insensitively, ignore emphasis markers, and accept any heading level.
+- **Old demo id.** `contract-offer-acceptance` from T00 is not in the curriculum. T06's bank needs entries keyed to the new ids, such as `contract-agreement.offer-vs-itt` and `contract-agreement.acceptance`.
+- **Cross-district prerequisites.** Some go beyond the bare VISION chain, for example Interpretation after Precedent and Legislation. Please check they make sense.
+
+**Next:** T03 can use `flattenSubsections`, `subsectionIndex` and the prerequisite lists for gating. T06 needs bank entries keyed to the new ids. Decide whether to add Occupiers' Liability and Judicial Review notes to the vault and regenerate.

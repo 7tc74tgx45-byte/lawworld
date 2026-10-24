@@ -41,7 +41,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Create folders `src/logic/` (pure JS, no Phaser, no DOM, no `import.meta.env`) and `src/ui/` (DOM overlays).
   - Done when: build and tests pass; README explains settings and the self-signed cert step.
 
-- [ ] **T02 — Generate the curriculum from the vault**
+- [x] **T02 — Generate the curriculum from the vault**
   - Use `vault_list` and `vault_outline` (headings, case names, statutes) to map every note matching `LAW7053-`, `LAW7054-`, `LAW7055-` (and `Bingham - Rule of Law.md` into Public Law). Use `vault_read` with a `heading` only where you need detail. Skip `TUTOR-SESSION-*`, cheat sheets and index files as districts (cheat sheets/indexes may inform concepts).
   - Write `src/data/curriculum.js`: modules → regions (season) → districts (one per chapter/lecture note, `sourceFile`) → subsections (one per meaningful `##`/`###` heading: `id`, `title`, `sourceFile`, `heading`, `keyConcepts[]`, `keyCases[]`, `statutes[]`, `prerequisites[]`, `suggestedTutor`).
   - Short extracted lists only; do not copy note prose into the repo.
