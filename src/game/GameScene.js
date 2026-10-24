@@ -27,6 +27,8 @@ import WorldRenderer from './WorldRenderer.js';
 import Weather from './Weather.js';
 import ClientNpcs from './ClientNpcs.js';
 import { startClientCase, canServeClient } from './clientFlow.js';
+import { music } from '../audio/music.js';
+import { getSetting } from '../settings.js';
 
 const PLAYER_SPEED = 150;
 
@@ -120,7 +122,11 @@ export default class GameScene extends Phaser.Scene {
     this.refreshClients();
     this.time.addEvent({ delay: 15000, loop: true, callback: () => this.refreshClients() }); // cooldowns end, settings change
     this.currentRegionId = null;
+    music.setVolume(getSetting('musicVolume'));
+    music.mute(getSetting('musicMuted'));
+    this.events.once('shutdown', () => music.stop());
     this.updateRegion(true);
+    if (!this.currentRegionId) music.playRegion('hub'); // started on a path between regions
     this.updateWeather(true);
     this.renderer.update(this.cameras.main);
   }
@@ -218,6 +224,7 @@ export default class GameScene extends Phaser.Scene {
     const region = regionAt(this.world, tx, ty);
     if (!region || region.id === this.currentRegionId) return;
     this.currentRegionId = region.id;
+    music.playRegion(region.id); // crossfades 2 s; the paths between regions keep the last theme
     if (silent) return;
     const season = { spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter' }[region.season] ?? '';
     const title = region.isHub ? 'Foundations Town' : region.title;
@@ -263,6 +270,7 @@ export default class GameScene extends Phaser.Scene {
     const tutor = useClaude ? createClaudeTutor({ personaId }) : makeOfflineTutor();
     const hasObsidian = !!getObsidianConfig().token;
     this.encounterOpen = true;
+    music.playEncounter();
     let recorded = false;
     // A closed tab must keep evaluated progress like the Leave button does (VISION §1.2).
     let handle = null;
@@ -283,6 +291,7 @@ export default class GameScene extends Phaser.Scene {
       },
       onClose: (res) => {
         this.encounterOpen = false;
+        music.endEncounter();
         window.removeEventListener('pagehide', onPageHide);
         if (!recorded) this.recordEncounter(sub, res);
       },

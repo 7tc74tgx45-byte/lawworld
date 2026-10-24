@@ -849,3 +849,51 @@ Cost $1.35 · 4 min · attempt 2
 **Design notes:** —
 
 **Next:** Continue this task.
+
+## T15 — done — 2026-10-24 04:39:56
+Cost $0.89 · 6 min · attempt 1
+
+**What changed:** The game now has procedural music made entirely with the Web Audio API. There are no audio files and no network requests. There are five themes: the hub pad, Contract, Tort, Public Law and an encounter track. Music crossfades over 2 seconds when you cross a region and when an encounter or client conversation opens or closes. Settings has a music volume slider and a mute checkbox, both saved. `npm run build` and `npm test` pass (256 tests). I could not listen to it, so how it sounds is untested.
+
+- **Hub (spring):** a warm pad of sine and triangle waves with gentle vibrato, over a C - Am - F - G progression.
+- **Contract (summer):** a 120 BPM plucked arpeggio in C major, built from triangle and sawtooth waves, with a bass note on beats 1 and 3.
+- **Tort (autumn):** a drone in A minor (A2 and E3) made of a detuned sawtooth pair with a slow tremolo on the gain. A few sparse bell notes sit on top.
+- **Public Law (winter):** open fifths (root and fifth, no third) in sine waves, with a long attack and slow decay.
+- **Encounter:** a low diminished-seventh sawtooth drone with a resonant filter that sweeps up over about 48 seconds, then eases back over about 16.
+
+**Where it lives:**
+- `src/audio/music.js`: `MusicManager`, with `playRegion`, `playEncounter`, `stop`, `setVolume` and `mute`. I also added `endEncounter()`, which returns to the region theme.
+- `src/audio/themes.js` and `src/audio/voices.js`: the five themes and their note-making helpers.
+- `src/logic/music.js`: pure rules (region-to-theme mapping, notes, volume curve, filter sweep), which the tests cover.
+
+**Looping:** each theme schedules one bar at a time, 2.5 seconds ahead of the audio clock, so loops have no gap. Overlapping bars fade into each other.
+
+**Wiring:**
+- **Region changes:** `GameScene.updateRegion` plays the theme for the region you enter. The paths between regions keep the last theme.
+- **Encounters and client conversations:** both start the encounter track and return to the region theme on close. Both go through the same overlay-close hook, so closing the tab mid-encounter is covered too.
+- **Settings:** the volume slider applies live as you drag and saves immediately. Mute does the same.
+- **New settings keys:** `musicVolume` and `musicMuted` in `src/settings.js`.
+- **Garden and door-panel overlays:** these don't change the music.
+
+**Tests:** `tests/music.test.js` runs the real schedulers against a fake AudioContext. It checks:
+- C major content, open fifths, a diminished-seventh chord and an A minor drone.
+- Oscillator types per theme.
+- Loop scheduling ahead of the clock.
+- The 2-second linear crossfade ramps.
+- Encounter and region ordering.
+- Mute and volume.
+- Silent fallback when there is no AudioContext.
+
+**Try it:** Run `npm run dev` and click or press a key once, because browsers block audio until then. You should hear the hub pad.
+
+1. Walk east across the bridge into Contract. Over 2 seconds the pad should turn into a bright arpeggio. Then try Tort (south) and Public Law (north).
+2. Open any building with E and pick a tutor. The music should swell into the low, tense drone, with the filter slowly opening. Leave, and the region theme should fade back in.
+3. Press Esc, then Settings. Drag the music volume slider; it should change at once. Tick Mute to silence it. Reload and the values should persist.
+
+**Design notes:** - **Autoplay:** browsers keep audio suspended until the first click or key press. The manager listens for that first gesture and then starts the music. Expect silence until you press something.
+- **Volume curve:** the slider is squared and capped at 0.6 gain, so full volume stays under the UI. The default is 50%.
+- **Untested by ear:** I tuned the note choices and levels by reasoning, not by listening. If any theme is too loud, shrill or quiet, adjust the `peak` values in `src/audio/themes.js`.
+- **Procedural pitch:** the encounter drone sits at C2 (about 65 Hz) with a sub-octave sine underneath. Small laptop speakers may barely reproduce that. Raising the chord by an octave would fix it.
+- **Overlay audio:** the music keeps playing when the journal or menu is open. Only encounters and client conversations switch to the tension track. That seemed right, since the tension track is meant to mark study time.
+
+**Next:** T16 and T17 (portraits and transitions) can follow. T17 should call `music.playRegion` from its midpoint callback if it wants the crossfade aligned with the screen fade. T18 (sound effects) should share the same AudioContext, or at least respect `musicMuted`.

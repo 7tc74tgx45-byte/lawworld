@@ -111,7 +111,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
 - [ ] **T14 — QA pass against the vision**
   - Read the whole codebase against VISION.md. Write `QA_REPORT.md`: what works, what violates the learning rules, bugs, missing pieces, ranked. Fix the top issues that fit this session; add the rest as new tasks below.
 
-- [ ] **T15 — Atmospheric music (procedural)**
+- [x] **T15 — Atmospheric music (procedural)**
   - Create `src/audio/music.js`: Web Audio API ambient engine, no downloads needed.
   - Four region themes generated in code: Contract (summer) = bright plucked strings (triangle + sawtooth oscillators, 120 BPM arpeggio in C major); Tort (autumn) = minor-key drone (detuned sawtooth pair, slow LFO on gain, Am); Public Law (winter) = sparse open fifths (sine waves, long attack, slow decay); Hub (spring) = warm pad (sine + triangle mix, gentle vibrato).
   - Encounter track: low drone with rising tension (sawtooth, filter cutoff sweeping up slowly, diminished chord).

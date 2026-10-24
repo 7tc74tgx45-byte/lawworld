@@ -8,6 +8,8 @@ export const DEFAULT_SETTINGS = {
   claudeModel: 'claude-sonnet-5-5',
   obsidianUrl: 'https://127.0.0.1:27124',
   obsidianToken: '',
+  musicVolume: 0.5, // 0-1 (T15)
+  musicMuted: false,
 };
 
 function storage() {

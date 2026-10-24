@@ -7,6 +7,7 @@ import { createClaudeTutor } from '../api/tutor.js';
 import { hasOfflineBank } from '../data/offlineBank.js';
 import { getClaudeKey } from '../api/claude.js';
 import { getObsidianConfig } from '../api/obsidian.js';
+import { music } from '../audio/music.js';
 import { curriculum } from '../data/curriculum.js';
 import { locateSubsection } from '../logic/curriculum.js';
 import { openGaps } from '../logic/progress.js';
@@ -61,6 +62,7 @@ export function startClientCase(scene, npc) {
     onFinish: (res) => record(res),
     onClose: (res) => {
       scene.encounterOpen = false;
+      music.endEncounter();
       record(res); // leaving early keeps what the evaluations so far earned
     },
   });

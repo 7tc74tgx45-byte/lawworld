@@ -5,6 +5,8 @@ import { openOverlay, el, button } from './dom.js';
 import { getAllSettings, setSetting, DEFAULT_SETTINGS } from '../settings.js';
 import { testClaudeConnection, getClaudeKey } from '../api/claude.js';
 import { testConnection as testObsidian } from '../api/obsidian.js';
+import { music } from '../audio/music.js';
+import { clampVolume } from '../logic/music.js';
 
 function field(labelText, { type = 'text', value = '', placeholder = '', id }) {
   const wrap = el('div', 'lw-field');
@@ -81,7 +83,36 @@ export function openSettings({ onClosed } = {}) {
   const bDone = button('Save and close', 'primary', done);
   const bHeading = el('h2', 'lw-h', 'Settings');
   const body = el('div', 'lw-body');
+
+  // Music (T15): applies and saves straight away, so you hear the change while dragging.
+  const musicWrap = el('div', 'lw-field');
+  const volLabel = el('label', null, `Music volume: ${Math.round(clampVolume(cur.musicVolume) * 100)}%`);
+  const vol = document.createElement('input');
+  vol.type = 'range';
+  vol.min = '0';
+  vol.max = '100';
+  vol.id = 'lw-music-vol';
+  vol.value = String(Math.round(clampVolume(cur.musicVolume) * 100));
+  volLabel.htmlFor = vol.id;
+  vol.oninput = () => {
+    const v = clampVolume(Number(vol.value) / 100);
+    volLabel.textContent = `Music volume: ${Math.round(v * 100)}%`;
+    setSetting('musicVolume', v);
+    music.setVolume(v);
+  };
+  const muteLabel = el('label', 'lw-check');
+  const mute = document.createElement('input');
+  mute.type = 'checkbox';
+  mute.checked = !!cur.musicMuted;
+  mute.onchange = () => {
+    setSetting('musicMuted', mute.checked);
+    music.mute(mute.checked);
+  };
+  muteLabel.append(mute, ' Mute music');
+  musicWrap.append(volLabel, vol, muteLabel);
+
   body.append(
+    musicWrap,
     key.wrap, model.wrap, row(bClaude), claudeStatus,
     url.wrap, token.wrap, row(bObs), obsStatus,
     certNote, envNote, row(bDone),
