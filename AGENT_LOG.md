@@ -210,3 +210,49 @@ The tests check:
 - **Cross-district prerequisites.** Some go beyond the bare VISION chain, for example Interpretation after Precedent and Legislation. Please check they make sense.
 
 **Next:** T03 can use `flattenSubsections`, `subsectionIndex` and the prerequisite lists for gating. T06 needs bank entries keyed to the new ids. Decide whether to add Occupiers' Liability and Judicial Review notes to the vault and regenerate.
+
+## T03 — done — 2026-10-24 01:27:46
+Cost $0.69 · 5 min · attempt 1
+
+**What changed:** I added `src/logic/progress.js` with gating, rollups, the gap log and stats, plus `tests/progress.test.js` with 32 new tests. `npm run build` and `npm test` both pass (67 tests). I ticked T03 in TASKS.md.
+
+**Gating**
+- Only `explored` and `consolidated` are stored. `locked` and `available` are worked out from prerequisites each time, so adding vault notes can't corrupt a save.
+- A subsection unlocks only when every prerequisite is `consolidated`. Explored does not unlock anything.
+- Causation (`tort-causation.but-for`) stays locked until the Duty (Caparo) and Breach subsections are consolidated. I tested this on the real curriculum as well as a small one. Breach that is only explored still leaves it locked.
+- The padlock tooltip can use `unmetPrerequisites`.
+
+**Rollups**
+- Districts, regions and modules each get counts, a fraction and a status: `locked`, `available`, `in-progress` or `consolidated`.
+- A district is consolidated only when all its subsections are. `isBrazierLit` is built on that.
+
+**Gap log**
+- Each gap has the requested fields: `subsectionId, concept, stage, firstSeen, lastSeen, timesMissed, resolved`. Concepts match case-insensitively.
+- Missing the same concept again raises `timesMissed` and re-opens a resolved gap.
+- A gap resolves when the concept is credited in a *solid* stage or a correct checkpoint answer, or through `recordRetrieval(..., verdict:'solid')` for the garden and client NPCs. A partial answer does not resolve it.
+
+**Stats**
+- Case Recall comes from the authority stage and Application from the scenario stage.
+- Statutory Interpretation comes from the precision stage, but only when the subsection lists statutes.
+- IRAC Fluency comes from the best IRAC score (0–4). Stages that were skipped or answered "I'm not sure" earn nothing.
+- Points per verdict are solid 3, partial 1, missing 0. `statLevel` turns points into levels.
+
+**Applying an encounter result**
+- `applyEncounterResult(progress, result, {subsection, now})` does not trust the result's own `outcome`. It re-runs the consolidation rule from the stage verdicts and checkpoint score.
+- Opening an encounter and leaving without answering anything changes nothing.
+- A later weaker attempt never downgrades `consolidated`.
+- Functions return new progress objects and never change the one passed in.
+
+**Small changes to `encounter.js`**
+- `result()` and `leave()` now include each stage's `conceptsHit` and the checkpoint's `conceptsHit`, so gaps can be resolved.
+- Leaving during a follow-up used to lose the gaps from the last thin answer. `result()` and `leave()` now log them. This was a real bug I found with a test.
+
+**Try it:** —
+
+**Design notes:** - **Concept matching:** gaps resolve by matching the concept text exactly (ignoring case). The offline bank labels and the Claude tutor must keep concept labels stable, ideally the subsection's `keyConcepts`, or gaps won't resolve. T06 should enforce this. Later I could add fuzzy matching.
+- **Stat points:** the point values (3/1/0) and level curve (5, 15, 30…) are my own choices. They are easy to change in `VERDICT_POINTS` and `statLevel`.
+- **Stored vs derived state:** the stored consolidated or explored state survives even if the curriculum later changes prerequisites. That seemed kinder than re-locking a building the player has already beaten.
+- **Cross-district prerequisites:** the "Causation needs Duty and Breach" chain exists through `after: ['tort-breach.calculus', 'tort-breach.res-ipsa']`, so it is the *end* of Breach, not all of it. Critical Perspectives on Breach is not required. I think that's reasonable.
+- **`iracScore` source:** the offline evaluator only sets `iracScore` on the scenario stage, so that's where IRAC Fluency comes from. The Claude tutor (T06) should return it for stages 3–5 too if wanted.
+
+**Next:** T04 (save system) can store the progress object as-is, since it is plain JSON, and use `normaliseProgress` when loading. T05 and T06 should keep concept labels consistent, as noted above.

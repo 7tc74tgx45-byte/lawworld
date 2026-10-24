@@ -180,7 +180,7 @@ export function createEncounter(subsection, tutor) {
     state.mcq.answered++;
     if (correct) state.mcq.correct++;
     else for (const c of ev.conceptsMissed ?? []) addGap(c, 6, 'missing');
-    state.mcq.results.push({ correct, picked: idx });
+    state.mcq.results.push({ correct, picked: idx, concepts: ev.conceptsHit ?? [] });
     msgs.push(say('tutor', ev.feedback, { kind: 'feedback', correct }));
     state.mcq.index++;
     state.mcq.hints = 0;
@@ -318,10 +318,31 @@ export function createEncounter(subsection, tutor) {
     const stages = {};
     for (const n of [2, 3, 4, 5]) {
       const s = state.stages[n];
-      stages[n] = { answered: s.answered, verdict: s.verdict, followUps: s.followUps, hints: s.hints, notSure: s.notSure, iracScore: s.iracScore };
+      const last = s.evaluations[s.evaluations.length - 1];
+      stages[n] = {
+        answered: s.answered, verdict: s.verdict, followUps: s.followUps, hints: s.hints, notSure: s.notSure, iracScore: s.iracScore,
+        // Concepts the final evaluation of this stage credited (progress.js resolves gaps from these).
+        conceptsHit: [...(last?.conceptsHit ?? [])],
+      };
     }
-    const checkpoint = { correct: state.mcq.correct, total: CHECKPOINT_QUESTIONS, answered: state.mcq.answered };
+    const checkpoint = {
+      correct: state.mcq.correct, total: CHECKPOINT_QUESTIONS, answered: state.mcq.answered,
+      conceptsHit: state.mcq.results.flatMap((r) => (r.correct ? r.concepts ?? [] : [])),
+    };
     const outcome = finished ? computeOutcome({ stages, checkpoint }) : 'explored';
+    // Leaving mid-stage (e.g. during a follow-up) must still log what the last evaluation found
+    // missing or partial, otherwise thin answers would leave no gap behind.
+    const gaps = state.gaps.map((g) => ({ ...g }));
+    for (const n of [2, 3, 4, 5]) {
+      const s = state.stages[n];
+      if (!s.answered || !s.verdict || s.verdict === 'solid') continue;
+      const last = s.evaluations[s.evaluations.length - 1];
+      for (const c of last?.conceptsMissed ?? []) {
+        if (c && !gaps.some((g) => g.concept === c && g.stage === n)) {
+          gaps.push({ subsectionId: subsection.id, concept: c, stage: n, verdict: s.verdict });
+        }
+      }
+    }
     return {
       subsectionId: subsection.id,
       tutor: tutorName,
@@ -330,7 +351,7 @@ export function createEncounter(subsection, tutor) {
       stages,
       checkpoint,
       exchanges: state.exchanges,
-      gaps: state.gaps.map((g) => ({ ...g })),
+      gaps,
       reflections: [...state.reflections],
       verdictText: state.verdictText,
       transcript: state.transcript.map((m) => ({ ...m })),

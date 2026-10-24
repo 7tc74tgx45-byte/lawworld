@@ -49,7 +49,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Tests: ids unique, all prerequisites exist, no cycles, every subsection has `sourceFile` and `heading`, at least one entry subsection per region has no prerequisites.
   - If the vault is unreachable, build from VISION §2 and the file list in it, set `source: "fallback"` on each district, and say so in finish_task.
 
-- [ ] **T03 — Progress, gating and stats logic** (`src/logic/progress.js`)
+- [x] **T03 — Progress, gating and stats logic** (`src/logic/progress.js`)
   - States: `locked | available | explored | consolidated` per subsection, derived from prerequisites; district and region rollups (a district is consolidated only when all its subsections are).
   - Gap log: `{ subsectionId, concept, stage, firstSeen, lastSeen, timesMissed, resolved }`.
   - Stats update from evaluation results (Case Recall from authority stage, Statutory Interpretation from precision on statutes, Application from scenario, IRAC Fluency from IRAC structure score).
