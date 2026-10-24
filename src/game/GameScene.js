@@ -16,6 +16,7 @@ import { allDistricts, findSubsection, locateSubsection } from '../logic/curricu
 import { computeStates, openGaps } from '../logic/progress.js';
 import { syncBraziers } from '../logic/garden.js';
 import { openGarden } from '../ui/garden.js';
+import { createEncounterRecorder, recordOnPageHide } from '../logic/encounterRecorder.js';
 import Garden from './Garden.js';
 import { describeDoor } from '../logic/doorInfo.js';
 import { buildWorld } from '../logic/layout.js';
@@ -281,10 +282,14 @@ export default class GameScene extends Phaser.Scene {
     const hasObsidian = !!getObsidianConfig().token;
     this.encounterOpen = true;
     music.playEncounter();
-    let recorded = false;
-    // A closed tab must keep evaluated progress like the Leave button does (VISION §1.2).
+    const recorder = createEncounterRecorder((res) => this.recordEncounter(sub, res));
+    // A closed tab must keep evaluated progress like the Leave button does (VISION §1.2): engine.leave() + recordEncounter.
     let handle = null;
-    const onPageHide = () => { if (this.encounterOpen) handle?.close(); };
+    const onPageHide = () => {
+      if (!this.encounterOpen) return;
+      recordOnPageHide(handle?.engine, recorder); // engine.leave() + recordEncounter, once
+      handle?.close(); // the engine has left: close the overlay too (the page may come back from the back/forward cache)
+    };
     window.addEventListener('pagehide', onPageHide);
     handle = openEncounter({
       subsection: sub,
@@ -296,14 +301,14 @@ export default class GameScene extends Phaser.Scene {
       // The encounter's end writes its result into progress + save exactly once:
       // on the verdict (onFinish), or when the player leaves early (onClose, not finished).
       onFinish: (res) => {
-        recorded = true;
-        this.recordEncounter(sub, res);
+        recorder.finish(res);
+        /* recorded once by the recorder */
       },
       onClose: (res) => {
         this.encounterOpen = false;
         music.endEncounter();
         window.removeEventListener('pagehide', onPageHide);
-        if (!recorded) this.recordEncounter(sub, res);
+        recorder.leave(res);
       },
     });
   }

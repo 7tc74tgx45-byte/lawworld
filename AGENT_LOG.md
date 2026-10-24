@@ -1011,3 +1011,33 @@ Cost $1.35 · 9 min · attempt 1
 - **New banks need `wrongRx`.** Any bank added later should include `wrongRx`. The test requires at least 3 patterns per stage 5.
 
 **Next:** T20 (learning-loop fixes). Its seed-cap item was already shipped in `tests/qaFixes.test.js`. Check that before redoing it.
+
+## T20 — done — 2026-10-24 05:03:46
+Cost $1.04 · 4 min · attempt 1
+
+**What changed:** Closing the tab mid-encounter now keeps evaluated progress, the engine accepts short questions, and the README is rewritten to match the game. The seed cap and the garden's 5-character question rule were already in the code from earlier sessions. `npm run build` passes and `npm test` passes (292 tests, 3 new).
+
+- **Closing the tab:** a new pure module, `src/logic/encounterRecorder.js`, makes sure a result is recorded exactly once. The first of three things to happen records it: a verdict, Leave, or the page being hidden.
+  - On `pagehide`, `GameScene` calls `engine.leave()` and then `recordEncounter`, and closes the overlay.
+  - A verdict followed by Leave, or `pagehide` followed by the overlay's own close, can no longer count twice.
+  - Before, `pagehide` only called `handle.close()`. That did work, but the double-recording guard was a loose flag.
+- **Ask-a-question length:**
+  - **Garden:** already used the 5-character minimum (`MIN_QUESTION_CHARS`).
+  - **Encounter engine:** had its own hard-coded 5. It now uses the shared constant, so the two cannot drift apart.
+- **Seed cap:** already implemented in T13 and covered by `tests/qaFixes.test.js`. A subsection pays at most 4 seeds per calendar day, and the cap resets the next day. I changed nothing there.
+- **README:** rewritten.
+  - **Removed:** the stale "grey rectangle" and "Settings arrives in T07" text.
+  - **Added:** controls, world and gating, encounters, the Settings screen, garden, clients, journal, save and export/import, and an updated project structure.
+- **Tests:** `tests/learningLoopT20.test.js` covers three things.
+  - **Recorder:** records once.
+  - **Pagehide:** after one answered stage, pagehide gives an explored subsection plus one session entry, and the engine then refuses further input.
+  - **Question length:** the engine rejects a question under 5 characters and accepts one of 5.
+- **TASKS.md:** T20 is ticked.
+
+**Try it:** Run `npm run dev` and open any building. Answer one stage with a real answer, then close the tab or reload. Reopen the game: the building should show as explored, and the journal should list the session and any gaps. Open a Claude-mode garden plot and try Ask with 5 characters (for example "bail?"). The Ask button only appears in the garden when Claude is connected.
+
+**Design notes:** - **Pagehide can't wait:** `pagehide` cannot wait for async work. The record step is synchronous: it uses the engine's already-evaluated state and a synchronous localStorage write. The Obsidian session note write is async and may not finish when the tab closes. The local save and journal entry are safe either way.
+- **Garden Ask is Claude-only:** it is hidden offline because the offline tutor has no free-form Q&A. That is deliberate, not a gap.
+- **Seeds are cheap early:** the cap is per subsection per day, so a player could still replay different buildings. That matches the task as written.
+
+**Next:** T21 (spend materials) and T22 (garden retrieval variety). T13 and T14 are skipped tonight.

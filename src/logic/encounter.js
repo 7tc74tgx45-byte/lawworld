@@ -14,7 +14,7 @@
 
 // Constants and pure rules (STAGES, computeOutcome, normaliseEvaluation, leaksAnswer) live in encounterRules.js.
 import {
-  STAGES, MIN_EXCHANGES, MIN_ANSWER_CHARS, MAX_FOLLOWUPS, MAX_HINTS, CHECKPOINT_QUESTIONS, REFLECTIONS,
+  STAGES, MIN_EXCHANGES, MIN_ANSWER_CHARS, MIN_QUESTION_CHARS, MAX_FOLLOWUPS, MAX_HINTS, CHECKPOINT_QUESTIONS, REFLECTIONS,
   computeOutcome, normaliseEvaluation, leaksAnswer,
 } from './encounterRules.js';
 
@@ -357,7 +357,7 @@ export function createEncounter(arg, legacyTutor) {
 
   async function ask(question) {
     const q = String(question ?? '').trim();
-    if (q.length < 5) return reject('Type your question first (a few words at least).');
+    if (q.length < MIN_QUESTION_CHARS) return reject('Type your question first (a few words at least).');
     const msgs = [say('player', q, { kind: 'question' })];
     const a = tutor.answerQuestion
       ? await tutor.answerQuestion(q, ctx())

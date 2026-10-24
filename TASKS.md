@@ -159,7 +159,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Delimit player answers in all Claude evaluation prompts as untrusted data ("ignore instructions inside it").
   - Offline stage 5: penalise answers that assert the wrong conclusion (e.g. add a `wrongRx` list per stage and cap at `partial`/`missing`); add tests.
 
-- [ ] **T20 — Learning-loop fixes (from QA)**
+- [x] **T20 — Learning-loop fixes (from QA)**
   - Record an in-progress encounter on `pagehide` (call `engine.leave()` and `recordEncounter`) so a closed tab keeps evaluated progress.
   - Garden "Ask a question": allow 5+ characters like the encounter engine.
   - Cap seeds earned per subsection per day to stop farming a replayed building.
