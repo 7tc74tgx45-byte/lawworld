@@ -436,3 +436,43 @@ Cost $2.49 · 18 min · attempt 1
 3. Add a "Play offline" toggle that sets `forceOffline`.
 4. Do a browser pass on the overlay layout.
 5. T08 will read the session-note fields from `result.tutor` and `result.transcript`.
+
+## T06 — done — 2026-10-24 02:12:59
+Cost $0.57 · 2 min · attempt 3
+
+**What changed:** T06 was already built in earlier sessions, so I only checked it against the spec, added tests for the Claude tutor and ticked the box in TASKS.md. `npm run build` and `npm test` both pass (141 tests).
+
+What was already in place and checked:
+- **Personas:** `src/data/tutors.js` has Hale, Okafor and Chen, each with a style fragment and voice examples. A shared rules block covers grounding in the note, no invented citations, England & Wales law only, the Occupiers' Liability Act 1984 point, and no answer leaks.
+- **Note section:** `extractSection(markdown, heading)` is in `src/logic/notes.js`. It includes nested headings, ignores fenced code, and matches headings loosely.
+- **Claude tutor:** `src/api/tutor.js` uses the live note section, the `TUTOR-SESSION` digests for that subsection, and the open gaps. Replies are strict JSON and are parsed defensively with one repair retry.
+- **Web search:** `answerQuestion` asks the note first. It calls the `web_search_20250305` tool only when the note doesn't cover the question, and marks that answer `external`. If the search fails, it says it won't guess beyond your notes.
+- **Offline tutor and bank:** `src/api/offlineTutor.js` and `src/data/offlineBank.js` give full 7-stage banks for:
+  - the demo subsection `contract-offer-acceptance`;
+  - the first three Contract subsections: `contract-intro.what-is-contract`, `contract-agreement.objective-approach` and `contract-agreement.offer-and-acceptance`;
+  - the first Tort subsection, `tort-trespass.assault`.
+
+  Evaluation is keyword overlap against concepts. Stage 5 needs visible IRAC structure to count as solid.
+
+What I added this session:
+- **New tests:** `tests/tutorClaudeFlow.test.js` has 6 tests using a scripted fake Claude. They cover:
+  - evaluate, hint and "I'm not sure" calls;
+  - checkpoint questions being generated once and marked locally;
+  - web search never being used when the note answers, and the honest fallback when search fails;
+  - the whole-note fallback when a heading isn't found;
+  - prior session notes and open gaps reaching the prompt, with resolved gaps left out;
+  - an encounter starting through the engine.
+- **Existing tests:** `tests/tutorT06.test.js` and `tests/bankQuality.test.js` already cover `extractSection`, JSON parsing and repair, and the offline verdicts.
+
+I changed no source files.
+
+**Try it:** Run `npm test` to see the T06 tests. To try Claude mode, add a Claude key and Obsidian token in Settings once the study door exists (T09). The demo "Contract Law" rectangle still uses the offline tutor.
+
+**Design notes:** - **Real Claude calls untested:** The Claude path is tested only with a scripted fake. No real API call or live Obsidian fetch has run, so prompt quality with the real model is unverified.
+- **Authority stage:** `contract-intro.what-is-contract` has no cases in your Ch1 note, so its authority stage uses Carlill, Balfour and Currie v Misa and says plainly that your note doesn't name them.
+- **Authority stage:** For `tort-trespass.assault`, the handout only lists case names. I wrote the case summaries from standard law. Thomas v NUM is deliberately not summarised, because the vault is silent on its holding.
+- **Citations to check:** I haven't checked the offline bank's citation strings against a case report, so check them if they matter to you.
+- **Offline evaluator:** The keyword evaluator is blunt. A correct answer in unusual wording can score partial. Each stage's own model answer is tested to score solid, and waffle never does.
+- **Banks not covered:** Offline mode shows "bank doesn't cover this" for every other building. The study-door UI (T09) must call `chooseMode` and `hasOfflineBank`.
+
+**Next:** Wire the study door in T09: tutor picker, `chooseMode`, and the offline-bank check. T08 adds session write-back. After that, try Claude mode against the real vault and tune the prompts.

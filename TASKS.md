@@ -66,7 +66,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - The engine depends on an injected `tutor` interface: `generate(stage, context) → prompt`, `evaluate(stage, prompt, answer, context) → { verdict: 'solid'|'partial'|'missing', feedback, conceptsHit, conceptsMissed, iracScore?, followUp? }`, `hint(...)`, `answerQuestion(...)`.
   - Tests with a mock tutor: cannot reach a verdict without answering; short answer rejected; hints never reveal the model answer field; consolidation and explored outcomes; gaps produced.
 
-- [ ] **T06 — Claude tutor provider and offline fallback**
+- [x] **T06 — Claude tutor provider and offline fallback**
   - `src/data/tutors.js`: the three personas (VISION §3) as system-prompt fragments with voice examples.
   - `src/api/tutor.js`: implements the tutor interface with Claude. Context = the note section for the subsection (fetched live via Obsidian, section extracted by a pure function `extractSection(markdown, heading)` in `src/logic/notes.js`), prior TUTOR-SESSION notes for that subsection, and open gaps. Ask for strict JSON; parse defensively (strip code fences, retry once with a repair prompt). `answerQuestion` uses the web_search server tool only when the note lacks the answer and marks it external.
   - `src/api/offlineTutor.js`: same interface, built-in bank (`src/data/offlineBank.js`) plus keyword-overlap evaluation against `keyConcepts`. Write a full 7-stage bank for at least the first 3 Contract subsections and the first Tort subsection, grounded in the vault notes (use `vault_read`).
