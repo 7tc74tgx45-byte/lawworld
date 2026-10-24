@@ -14,6 +14,7 @@ import { openOverlay, el, button } from './dom.js';
 import { getPortrait } from './portraits.js';
 import { sfx } from '../audio/sfx.js';
 import { evaluationSound } from '../logic/sfx.js';
+import { searchNotes } from '../api/obsidian.js';
 
 let active = null;
 
@@ -250,11 +251,34 @@ export function openEncounter({ subsection, tutor, priorGaps, loadMemory, onOpen
   }
 
   // ---- input handling
+  async function vaultSearch(query) {
+    const q = query.trim();
+    if (!q) return;
+    addMsg({ role: 'player', text: `/search ${q}` });
+    try {
+      const results = await searchNotes(q);
+      if (!results?.length) {
+        addMsg({ role: 'tutor', text: `No vault notes match "${q}".` });
+      } else {
+        const hits = results.slice(0, 6).map(r => r.filename).join('\n');
+        addMsg({ role: 'tutor', text: `Vault search for "${q}":\n${hits}` });
+      }
+    } catch (err) {
+      addMsg({ role: 'tutor', text: `Search failed: ${err.message}` });
+    }
+  }
+
   function doSubmit() {
     if (kind === 'info' && mode !== 'ask') return run(() => engine.next());
     if (kind === 'mcq' && mode !== 'ask') return null;
     const text = ta.value;
     if (!text.trim()) return null;
+    // /search command — query vault, show results, don't submit to tutor
+    if (text.trimStart().startsWith('/search ')) {
+      ta.value = '';
+      vaultSearch(text.trimStart().slice('/search '.length));
+      return null;
+    }
     if (mode === 'ask') {
       ta.value = '';
       return run(async () => {

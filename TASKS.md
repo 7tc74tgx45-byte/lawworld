@@ -238,3 +238,10 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - M key closes the map; clicking outside a district also closes it.
   - Tests: map renders without crashing when curriculum is empty; player dot updates on next open; clicking a district shows correct stats.
   - Done when: pressing M in the game shows a clear, readable world map with at least the main Contract and Tort regions visible and correctly labelled.
+
+- [x] **T97 — /search command in tutor encounter**
+  - Why: tutor flags cases/concepts not in your notes; player needed a way to search the vault mid-encounter without leaving the game.
+  - During any tutor encounter, type `/search <query>` in the answer box. The game queries the Obsidian REST API `/search/simple/` endpoint and shows matching vault filenames in the transcript as a tutor message. Does not submit to Claude — purely a vault lookup.
+  - Implemented in `src/ui/encounter.js` — intercepts `/search ` prefix in `doSubmit`, calls `searchNotes()` from `src/api/obsidian.js`, renders results inline.
+  - Offline gracefully: if Obsidian is unreachable, shows the error message from the API call.
+  - Done: 2026-10-24.
