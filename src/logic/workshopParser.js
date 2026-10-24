@@ -60,8 +60,13 @@ export function parseWorkshopNote(markdown) {
     const scenarioMatch = /^Scenario\s+\d+\s*:\s*(.+)$/i.exec(name);
     if (scenarioMatch) {
       const scenarioName = scenarioMatch[1].trim();
-      // Split at the first **Issue: line
-      const firstIssueIdx = sectionLines.findIndex(ln => /^\*\*Issue[:\s]/.test(ln.trim()));
+      // Split at the first analysis line: **Issue:, **Conclusion:, or **BoldHeader — (e.g. Angela — standard of care)
+      const firstIssueIdx = sectionLines.findIndex(ln => {
+        const t = ln.trim();
+        return /^\*\*Issue[:\s]/i.test(t) ||
+               /^\*\*Conclusion[:\s]/i.test(t) ||
+               /^\*\*[A-Z][^*]+[\u2014\-]\s/.test(t); // e.g. **Angela — standard of care**
+      });
       let scenarioText, modelAnswer;
       if (firstIssueIdx === -1) {
         // No Issue blocks — whole section is scenario text

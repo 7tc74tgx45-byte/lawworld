@@ -31,9 +31,9 @@ export function openWorkshopPanel({ title, workshopFile, vaultOnline, onStart })
   panel.append(note);
 
   panel.append(el('p', null,
-    'Work through the scenario, write your IRAC answer, then check it against the model. Finish with a flash-card round on the things to know cold.'));
+    'Your tutor will walk through each scenario with you — spotting issues, working out the law, applying it to the facts. You talk; they guide. A flash-card round finishes it off.'));
 
-  const startBtn = button('Start Workshop', 'primary', () => {
+  const startBtn = button('Start Workshop Prep', 'primary', () => {
     close();
     onStart?.();
   });
