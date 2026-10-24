@@ -125,6 +125,17 @@ const stage4 = {
   },
 };
 
+// Wrong conclusions for stage 5, written positively; a "not", "argue", "might" etc. just before one means it is not asserted.
+const STAGE5_WRONG = [
+  'contract (was |is |has been |has )?(formed|made|concluded|complete) (when|as soon as|the moment|once|at the point) (alice|she|the customer)? ?(picked|pick|took|take|grabbed|lifted|put)',
+  '(contract|sale|deal) (is|was|has been|had been) (already )?(formed|made|concluded|complete|binding) (on|at) the shelf',
+  'the (shop|supermarket|store|bob) (is|was|are) (legally |contractually )?(bound|obliged|required) to sell',
+  'alice (is|was) (legally )?entitled to (buy|pay|the|have)',
+  'bob (cannot|can\'t|can not|must not) (refuse|withdraw|change)',
+  '(display|shelf|goods on (the )?shelf) (is|was|are) (an|the) offer',
+  'alice (accepted|has accepted) (the offer )?(by|when|as soon as)',
+];
+
 const stage5 = {
   prompt:
     'Stage 5, application. Client scenario: a supermarket displays tins of beans on the shelf, each marked 50p. Alice picks one up. Bob, the manager, sees her and says "sorry, that is mispriced, they are £2." Alice says she is entitled to buy at 50p. Has a contract formed? Advise in IRAC: Issue, Rule, Application, Conclusion.',
@@ -135,6 +146,7 @@ const stage5 = {
     'For the Rule, which two cases deal with display of goods? Then ask: at what point in the shop does the customer make the offer and the shop accept?',
   ],
   cases: caseInfo('fisher', 'boots'),
+  wrongRx: STAGE5_WRONG,
   evaluation(answer) {
     const irac = iracScore(answer);
     const ev = evaluateByConcepts(answer, {
@@ -148,6 +160,9 @@ const stage5 = {
       solidAt: 0.8,
       partialAt: 0.4,
       requiredIds: ['itt', 'till'],
+      conclusionId: 'refuse',
+      wrongRx: STAGE5_WRONG,
+      wrongNote: 'On the shelf there is only an invitation to treat, so Alice picking up a tin cannot be an acceptance; in a self-service shop her offer is made at the till (Pharmaceutical Society v Boots).',
       followUp: (missed) => `Think about the till. In a self-service shop, who makes the offer and who accepts, and where? Your answer is missing: ${missed.map((m) => m.label).join('; ')}.`,
     });
     ev.iracScore = irac;
@@ -178,6 +193,12 @@ const stage7 = {
   cases: [],
   evaluation: () => ({ verdict: 'solid', feedback: '', conceptsHit: [], conceptsMissed: [] }),
 };
+
+// The hand-written demo stages carry their own concept labels, so "I'm not sure" logs this stage's ideas only.
+stage2.conceptLabels = ['what an offer is', 'what acceptance is', 'invitation to treat', 'when the parties are bound'];
+stage3.conceptLabels = ['offer v invitation to treat', 'acceptance and counter-offer (Hyde v Wrench)', 'communication of acceptance', 'the postal rule (Adams v Lindsell)', 'revocation (Byrne v Van Tienhoven)', 'auctions (SGA 1979 s.57)'];
+stage4.conceptLabels = ['name an authority', 'the key facts', 'the rule or ratio', 'why the case matters'];
+stage5.conceptLabels = ['shelf display is an invitation to treat', 'Fisher v Bell', 'Pharmaceutical Society v Boots', 'the offer is made at the till', 'no contract at 50p'];
 
 export const OFFLINE_BANK = {
   'contract-offer-acceptance': { 1: stage1, 2: stage2, 3: stage3, 4: stage4, 5: stage5, 6: stage6, 7: stage7 },

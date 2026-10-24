@@ -88,6 +88,16 @@ export const contractIntroBank = buildSubsectionBank({
       { id: 'courier', label: 'the courier loss can be both contract and tort', any: ['courier', 'parcel', 'both (contract|breach)', 'negligen'] },
     ],
     requiredIds: ['dom', 'conc'],
+    // Wrong conclusions: asserting the family promise IS enforceable (negations such as "is not binding" do not match).
+    wrongRx: [
+      '(the |dee\'?s |her )?(promise|arrangement|agreement) (is|was|will be) (an? )?(legally )?(enforceable|binding|a (legally binding |valid )?contract)',
+      'there (is|was) (a|an) (valid |binding |legally binding |enforceable )?contract between (maya|them|the sisters)',
+      'maya (will|can|should|is likely to) (win|succeed|recover|sue successfully)',
+      'maya has a (strong|good|valid|clear) (claim|case)',
+      'dee (is|was|will be) (legally |contractually )?(bound|liable|obliged) to (pay|continue)',
+      'domestic (promises|arrangements) (are|is) (usually |normally |generally )?(legally )?(binding|enforceable)',
+    ],
+    wrongNote: 'Between family members the starting presumption is that no legal relations were intended (Balfour v Balfour), so a dinner-table promise is unlikely to be enforceable.',
     followUp: (missed) => `Re-read the facts: a promise made between sisters at dinner. Your answer is missing: ${missed.map((m) => m.label).join('; ')}.`,
   }),
   mcqs: [

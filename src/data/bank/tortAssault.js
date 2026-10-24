@@ -104,6 +104,17 @@ export const assaultBank = buildSubsectionBank({
       { id: 'conc', label: 'conclusion: strong claim for the bottle incident, arguable for the voicemails', any: ['strong', 'likely (to )?(succeed|be)', 'good claim', 'assault (is|was) (made out|established)', 'arguable', 'weaker', 'fact[- ]dependent'] },
     ],
     solidAt: 0.75, requiredIds: ['def', 'imm'],
+    // Wrong conclusions about the bottle incident: no assault because she was stopped or untouched, or contact needed.
+    wrongRx: [
+      'jo has no (claim|case|action)',
+      'no assault (because|as|since|where|when|if) (the )?(doorman|dev (was|got) (stopped|grabbed)|she was not touched|jo was not touched|no (contact|touching))',
+      '(doorman|stopped|grabbed|not touched|no contact).{0,40}(so|therefore|thus|hence).{0,20}no assault',
+      '(bottle|raised bottle|dev\'?s? (conduct|actions?|behaviour)).{0,40}(was|is) not (an )?assault',
+      'assault (requires|needs|involves) (actual |physical )?(contact|touching|force|injury)',
+      '(contact|touching|an injury|injury) (is|was) (required|needed|essential) (for|in) (an )?assault',
+      'it (was|is|became) (a )?battery (not|rather than) (an )?assault',
+    ],
+    wrongNote: 'Assault needs reasonable apprehension of immediate force, not contact; being stopped by the doorman does not undo it (Stephens v Myers).',
     followUp: (missed) => `Take the bottle incident first. Your answer is missing: ${missed.map((m) => m.label).join('; ')}.`,
   }),
   mcqs: [

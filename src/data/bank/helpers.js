@@ -59,13 +59,17 @@ export function authorityStage({ prompt, modelAnswer, hints, cases, noCaseHelp }
 }
 
 /** Stage 5: IRAC application. spec.concepts are the legal points; IRAC structure is scored separately. */
-export function applicationStage({ prompt, modelAnswer, hints, concepts, requiredIds = [], cases = [], solidAt = 0.75, partialAt = 0.4, followUp }) {
+export function applicationStage({
+  prompt, modelAnswer, hints, concepts, requiredIds = [], cases = [], solidAt = 0.75, partialAt = 0.4, followUp,
+  wrongRx = [], wrongNote, conclusionId = 'conc',
+}) {
   return {
     prompt, modelAnswer, hints, cases,
+    wrongRx,
     conceptLabels: concepts.map((c) => c.label),
     evaluation(answer) {
       const irac = iracScore(answer);
-      const ev = evaluateByConcepts(answer, { concepts, solidAt, partialAt, requiredIds, followUp });
+      const ev = evaluateByConcepts(answer, { concepts, solidAt, partialAt, requiredIds, followUp, wrongRx, wrongNote, conclusionId });
       ev.iracScore = irac;
       if (ev.verdict === 'solid' && irac < 2) {
         ev.verdict = 'partial';

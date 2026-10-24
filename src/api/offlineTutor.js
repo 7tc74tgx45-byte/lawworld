@@ -45,6 +45,16 @@ export function clientFileText(stage5Prompt, clientName = 'The client') {
   return `${clientName} has come to the office with a problem. The file reads: ${body}`;
 }
 
+/**
+ * The concepts an "I'm not sure" on this stage should log: the bank stage's own labels, never every keyConcept
+ * of the building (QA finding). A stage with no labels falls back to one label naming the stage's skill.
+ */
+export function stageConcepts(st, stage, subsection) {
+  if (st?.conceptLabels?.length) return st.conceptLabels.slice(0, 5);
+  const skill = { 2: 'the idea in plain English', 3: 'the legal rule stated precisely', 4: 'authority (a case or statute)', 5: 'applying the rule to the facts' }[stage] ?? 'this stage';
+  return [`${subsection?.title ?? 'this topic'}: ${skill}`];
+}
+
 const NOTE_QA = [
   { rx: ['postal'], text: 'The postal rule (Adams v Lindsell) says acceptance by post is complete on posting, if post is a reasonable method. It is an exception to the general receipt rule, and it does not cover revocation (Byrne v Van Tienhoven) or instant communications (Entores).' },
   { rx: ['invitation', 'itt'], text: 'An invitation to treat invites others to make offers and does not bind the person inviting. Standard examples are shop displays (Fisher v Bell, Pharmaceutical Society v Boots), and a price given in reply to a request for information (Harvey v Facey). Adverts can still be offers if worded as a firm promise (Carlill).' },
@@ -115,7 +125,7 @@ export function createOfflineTutor(opts = {}) {
       const names = (st.cases ?? []).map((c) => `${c.name}: ${c.ratio}`).join('\n');
       return {
         explanation: `${st.modelAnswer}${names ? '\n' + names : ''}`,
-        concepts: (st.conceptLabels?.length ? st.conceptLabels : ctx.subsection.keyConcepts).slice(0, 5),
+        concepts: stageConcepts(st, stage, ctx.subsection),
       };
     },
 

@@ -103,6 +103,16 @@ const objectiveBank = buildSubsectionBank({
       { id: 'conc', label: 'conclusion: Tomás is probably not bound, if he can show the buyer knew', any: ['not bound', 'no contract', 'can (avoid|resist|refuse)', 'unlikely to be bound', 'not (be )?liable', 'probably not'] },
     ],
     requiredIds: ['obj', 'know'],
+    // Wrong conclusions: that Tomás is bound / the buyer wins, or that private intention is the test.
+    wrongRx: [
+      'tom[aá]s (is|was|will be|would be) (legally |contractually )?(bound|liable|obliged)',
+      'tom[aá]s (must|has to|will have to|should) (honou?r|sell|fulfil|supply|deliver)',
+      '(the )?(buyer|customer) (is|was) (entitled|able) to (hold|enforce|insist|buy)',
+      '(the )?(buyer|customer) (can|may|will) (hold|enforce|insist)',
+      'a contract (was |has been |is )?(formed|made|concluded) (at|for) £?4\\.99',
+      '(his|tom[aá]s\'?s?|private|subjective) (private |subjective )?(intention|intentions) (is|are|was) (what matters|the test|decisive|enough)',
+    ],
+    wrongNote: 'The listing looks like an offer objectively, but a party who knows or ought to know of the other\'s mistake cannot snap it up (Smith v Hughes), so Tomás has a real argument that he is not bound.',
     followUp: (missed) => `Think about what the buyer knew. Your answer is missing: ${missed.map((m) => m.label).join('; ')}.`,
   }),
   mcqs: [
@@ -208,6 +218,18 @@ const frameworkBank = buildSubsectionBank({
       { id: 'conc', label: 'conclusion: a contract was formed on Wednesday', any: ['(a )?contract (was |has been |is )?(formed|made|concluded)', 'there is a contract', 'binding contract', 'too late'] },
     ],
     requiredIds: ['conc'],
+    // Wrong conclusions: no contract, withdrawal effective on posting, acceptance only on receipt.
+    wrongRx: [
+      'there (is|was) no (binding |valid )?contract',
+      'no (binding |valid )?contract (was |has been |is )?(formed|made|concluded|exists)',
+      '(rhea\'?s? )?(withdrawal|revocation) (was |is )?(effective|complete|valid|in time) (on|when|upon|as soon as) (it was )?(post|sent|writ)',
+      '(rhea\'?s? )?(withdrawal|revocation) (was|is) (effective|in time|valid)',
+      'omar\'?s? acceptance (was|is) (too late|ineffective|not effective|invalid)',
+      'acceptance (is|was) (only )?(effective|complete) (on|upon|until|when) (receipt|received|it (is|was) received|it arrived)',
+      'rhea (is|was) not bound',
+      'omar (is|was) not bound',
+    ],
+    wrongNote: 'Acceptance by post is complete on posting (Adams v Lindsell), whereas a revocation only takes effect when it reaches the offeree (Byrne v Van Tienhoven). Omar posted before the withdrawal arrived.',
     followUp: (missed) => `Trace the dates on a timeline. Your answer is missing: ${missed.map((m) => m.label).join('; ')}.`,
   }),
   mcqs: [
