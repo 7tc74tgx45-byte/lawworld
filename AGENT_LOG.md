@@ -1100,3 +1100,27 @@ Files changed: `src/logic/retrieval.js`, `garden.js`, `save.js`, `src/ui/garden.
 - **Thirsty threshold.** One in-game day is a judgement call and easy to tune.
 
 **Next:** Playtest the offline retrieval questions for fairness. The concept-overlap patterns may be too strict or too lenient on real answers. Then extend `RETRIEVAL_BANK` beyond the five banked subsections as more encounter banks are written.
+
+## T90 — done — 2026-10-24 05:29:05
+Cost $0.60 · 3 min · attempt 1
+
+**What changed:** I appended T91, T92 and T93 under "## Agent-proposed" in TASKS.md, each with a "Done when". I didn't change any code, so I didn't run the build or tests. They are ordered learning depth, then Obsidian integration, then feel.
+
+- **T91 — Extra depth layer in encounters.** VISION §1 says the tutor adds a layer when the note has more depth, for example part payment → Pinnel's Case → Foakes v Beer → estoppel. Neither the Claude nor the offline tutor does this, so every encounter is the same flat 2→3→4→5 path. The task adds one typed "connect two authorities" question between Authority and Application. It doesn't change the 7 pips or the consolidation rule.
+- **T92 — Keep the map in step with the vault.** The curriculum is a static snapshot. Several notes have no district at all, for example `LAW7054-Contract-Week3-Consideration-Estoppel.md`, `LAW7054-Tort-W2-Duty-of-Care-Psychiatric-Injury.md` and `LAW7055-Parliamentary-Sovereignty-Notes.md`. A renamed heading silently makes the tutor receive the whole note. The task adds a read-only, headings-only check of the vault against the map, a Settings report, and generated districts for notes with no building.
+- **T93 — Make consolidation feel like an event.** The verdict is plain transcript text and the world barely reacts. The task adds a result card with a chip per stage, IRAC score, rewards and gaps. After a consolidated close, the camera pans to the building, the door pulses and the brazier lights if the district is complete.
+
+**Try it:** Open TASKS.md and read the three new entries at the bottom, under "## Agent-proposed". There is nothing to try in the browser.
+
+**Design notes:** I read the code and the QA report against VISION.md; I didn't run the game in a browser.
+
+- **Why T91 is first.** Most of the earlier QA fixes were already done in T19–T22. The biggest remaining gap against the vision's depth rule is that the extra layer is missing, and that matters most to Fynn.
+- **Layer as a sub-step, not an eighth stage.** I made the layer a sub-step so that pips, consolidation and save data stay unchanged. A missing layer answer logs gaps but cannot block consolidation on its own, so the consolidation rule stays exactly as VISION §1 states it.
+- **Left out of the three tasks.**
+  - Opening an encounter with a typed recall question on the top open gap. VISION §1.3 says gaps resurface at the start of the next encounter, but today the intro only mentions them. It is noted in T91 as a possible later task.
+  - Offline coverage of only 5 subsections. It is mostly a content-writing job, so it doesn't fit a single session.
+  - Playtesting the offline retrieval fairness left over from T22.
+- **T93 is untested by eye.** Its Phaser parts can't be checked automatically, so someone needs to look at a dev run.
+- **The vault changed since the curriculum was written.** The vault now has several notes with no district, which is what T92 is based on.
+
+**Next:** Run T91 next, then T92, then T93. If budget is tight, T91 alone gives the biggest learning gain.
