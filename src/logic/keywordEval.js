@@ -24,6 +24,18 @@ export function matchConcepts(answer, concepts) {
  * @param {string} answer
  * @param {{concepts:Array, solidAt?:number, partialAt?:number, cases?:Array, praise?:string}} spec
  */
+/**
+ * True when an answer is a pile of comma-separated keywords rather than connected sentences
+ * (QA finding: a bare list of case names and terms could earn "solid" offline).
+ */
+export function looksLikeKeywordList(answer) {
+  const text = String(answer ?? '');
+  const words = text.split(/\s+/).filter(Boolean).length;
+  if (words < 8) return false;
+  const commas = (text.match(/[,;]/g) ?? []).length;
+  return commas / words > 0.2;
+}
+
 export function evaluateByConcepts(answer, spec) {
   const { concepts } = spec;
   const solidAt = spec.solidAt ?? 0.75;
@@ -31,6 +43,8 @@ export function evaluateByConcepts(answer, spec) {
   const { hit, missed } = matchConcepts(answer, concepts);
   const score = concepts.length ? hit.length / concepts.length : 0;
   let verdict = score >= solidAt ? 'solid' : score >= partialAt ? 'partial' : 'missing';
+  const listy = looksLikeKeywordList(answer);
+  if (listy && verdict === 'solid') verdict = 'partial';
   // Some ideas are essential: without them an answer cannot be "solid".
   if (verdict === 'solid' && spec.requiredIds?.some((id) => missed.some((c) => c.id === id))) {
     verdict = 'partial';
@@ -49,6 +63,7 @@ export function evaluateByConcepts(answer, spec) {
       parts.push(`${c.caseName}: ${c.ratio}`);
     }
   }
+  if (listy) parts.push('That reads like a list of keywords. Explain how the ideas connect, in full sentences.');
   if (verdict === 'solid') parts.push('That is a solid answer.');
 
   const result = {

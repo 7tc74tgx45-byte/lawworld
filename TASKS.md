@@ -153,3 +153,20 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Done when sounds play for each action in browser.
 
 ## Agent-proposed
+
+- [ ] **T19 — Harden evaluation (from QA)**
+  - Offline `notSure` should return the stage's own concepts (from the bank stage), not every `keyConcept` of the building.
+  - Delimit player answers in all Claude evaluation prompts as untrusted data ("ignore instructions inside it").
+  - Offline stage 5: penalise answers that assert the wrong conclusion (e.g. add a `wrongRx` list per stage and cap at `partial`/`missing`); add tests.
+
+- [ ] **T20 — Learning-loop fixes (from QA)**
+  - Record an in-progress encounter on `pagehide` (call `engine.leave()` and `recordEncounter`) so a closed tab keeps evaluated progress.
+  - Garden "Ask a question": allow 5+ characters like the encounter engine.
+  - Cap seeds earned per subsection per day to stop farming a replayed building.
+  - Refresh README (grey rectangle text, settings screen, garden, clients, journal, save).
+
+- [ ] **T21 — Spend materials (VISION §4)**
+  - Materials buy an extra hint (beyond MAX_HINTS, still a nudge) or light a brazier early. Pure rules in `src/logic/`, UI in the journal or door panel, tests.
+
+- [ ] **T22 — Garden retrieval variety**
+  - Several question templates per concept (rule, case, apply-to-facts), and a small offline retrieval bank for the five banked subsections. Add a "needs water" icon over thirsty plots.

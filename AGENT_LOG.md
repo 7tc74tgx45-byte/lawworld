@@ -799,3 +799,42 @@ Cost $1.79 · 8 min · attempt 2
 3. Add a "plants need water" indicator, such as a small icon over thirsty or withered plots, and a note in the journal.
 4. Let materials buy extra hints or light braziers, as the vision describes.
 5. Add a dedicated offline retrieval question bank, so the offline check isn't just keyword matching on concept names.
+
+## T14 — partial — 2026-10-24 04:29:49
+Cost $1.55 · 9 min · attempt 1
+
+**What changed:** I wrote `QA_REPORT.md` and fixed one learning-rule hole: the offline evaluator could be gamed with a list of keywords. I added four new tasks, T19–T22, to `TASKS.md` for what I didn't fix. `npm run build` and `npm test` both pass (235 tests).
+
+I read the encounter engine and rules, both tutor providers, the client and garden flows, progress and save logic, the Obsidian and Claude clients, `GameScene`, and the main overlays. I did not read all the art and layout files, and I did not run the game in a browser. The report marks what I couldn't verify.
+
+**What holds up against VISION §1:**
+- Typed answers are required.
+- Only the tutor's evaluation consolidates a building.
+- The consolidation rule matches the vision exactly.
+- Follow-ups, hints and "I'm not sure" behave as specified.
+- The player can ask questions at any point.
+- Writes to the vault are guarded twice.
+- No key or token ends up in the built bundle.
+
+**The fix:** a comma-separated list of case names and legal terms scored "solid" on stages 2, 3 and 5 offline. That could earn seeds and consolidate a building with no understanding. Such an answer is now capped at "partial", and the feedback tells the player to explain in sentences. The change is in `src/logic/keywordEval.js`, with tests in `tests/keywordStuffing.test.js`.
+
+**Still open, in rough order of importance (details in the report):**
+1. **Offline evaluation is weaker than Claude's.** The offline check is keyword-based, so a confidently wrong application that names the right cases scores "partial", not "missing". The same stuffed list would still get partial credit, not zero.
+2. **Offline "I'm not sure" logs too many gaps.** It logs every key concept of the building as a gap.
+3. **Seeds can be farmed.** Replaying a building offline pays seeds every time.
+4. **Materials do nothing.** Nothing spends them, though the vision says they buy hints or light braziers.
+5. **Closing the tab mid-encounter loses that session.** The Leave button keeps progress; a closed tab does not.
+6. **The garden "Ask a question" box needs 15 or more characters.** The encounter allows 5.
+7. **Prompt injection.** Player answers go into Claude's evaluation prompts without being marked as untrusted text.
+8. **Few buildings are playable offline.** Only 5 have offline question banks.
+9. **The README is stale.**
+
+**Try it:** Read `QA_REPORT.md`. To see the fix, play the offline Contract "Offer and acceptance" building. At stage 2, 3 or 5 paste a comma-separated list of case names and terms. You should get "partial" and a message to explain in sentences. A normal prose answer should still be able to score "solid". Automated check: `node --test tests/keywordStuffing.test.js`.
+
+**Design notes:** I kept the fixes small because I was close to the budget limit. I chose the keyword-stuffing fix because it let a player progress without showing understanding, which breaks the main rule.
+
+The `looksLikeKeywordList` check is a heuristic: it flags text where commas and semicolons make up more than 20% of the words. It could wrongly flag a genuine answer that is mostly short comma-separated clauses. It only lowers "solid" to "partial", and the player still gets a follow-up, so I judged that acceptable.
+
+The offline keyword evaluator is inherently weak. T19 adds wrong-conclusion detection but won't make it equal to Claude's judgement. Offline seeds and consolidations are weaker evidence than online ones.
+
+**Next:** Do T19 and T20 first. They cover the offline evaluation and gap logging, prompt injection, saving progress on tab close, and seed farming. T21 and T22 follow. Then play the game in a browser and check the garden overlay layout, the brazier glow position and the plot positions. The report lists these as unverified.
