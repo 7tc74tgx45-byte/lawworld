@@ -96,6 +96,7 @@ export function createEncounter(arg, legacyTutor) {
       priorGaps: priorGaps.map((g) => ({ ...g })),
       memory: memory ? memory.map((m) => (typeof m === 'object' ? { ...m } : m)) : undefined,
       exchanges: state.exchanges,
+      transcript: state.transcript.map((m) => ({ ...m })),
       ...extra,
     };
   }

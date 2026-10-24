@@ -228,6 +228,23 @@ export function createClaudeTutor(opts = {}) {
     /** Answer from the note first; use web search ONLY if the note lacks the answer, and mark that external. */
     async answerQuestion(question, ctx) {
       const { block } = await load(ctx);
+      // Build conversation history from transcript so the tutor remembers what was said.
+      // Transcript entries: { role: 'tutor'|'player'|'system', text: string }
+      // Map to Claude roles: tutor -> assistant, player -> user, system -> skip.
+      const history = (ctx.transcript ?? [])
+        .filter((m) => m.role === 'tutor' || m.role === 'player')
+        .slice(-20) // keep last 20 exchanges to stay within context limits
+        .map((m) => ({ role: m.role === 'tutor' ? 'assistant' : 'user', content: m.text }));
+      // Ensure messages alternate properly (Claude requires user/assistant alternation).
+      // Prepend the note context as the first user message if we have history.
+      const contextMsg = { role: 'user', content: answerPrompt(block, question) };
+      const messages = history.length
+        ? [...history, { role: 'user', content: `Given everything above, answer this question: ${question}` }]
+        : [contextMsg];
+      const res = await call({ system, messages, maxTokens: 1400, model: opts.model });
+      const text = (res.text ?? '').trim();
+      if (text) return { text, external: false };
+      // Fallback: stateless call with note context
       const o = await askJson(answerPrompt(block, question), (x) => (typeof x.text === 'string' && x.text.trim() && typeof x.inNote === 'boolean' ? x : null));
       if (o.inNote) return { text: o.text.trim(), external: false };
       try {
