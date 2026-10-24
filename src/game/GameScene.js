@@ -32,6 +32,8 @@ import { createCat, updateCat, catFrame, pickBesideSpot } from '../logic/cat.js'
 import { STATE_LABEL } from './palette.js';
 import WorldRenderer from './WorldRenderer.js';
 import Weather from './Weather.js';
+import DayNight from './DayNight.js';
+import Minimap from './Minimap.js';
 import ClientNpcs from './ClientNpcs.js';
 import { startClientCase, canServeClient } from './clientFlow.js';
 import { music } from '../audio/music.js';
@@ -79,6 +81,11 @@ export default class GameScene extends Phaser.Scene {
     this.cat = createCat(catStart.x, catStart.y);
     this.catSprite = this.add.image(this.cat.x, this.cat.y, 'cat-sit-0').setOrigin(0.5, 0.9);
     this.weather = new Weather(this, this.scale.width, this.scale.height);
+    this.dayNight = new DayNight(this, this.scale.width, this.scale.height);
+    // Minimap: attach to the same parent element as the Phaser canvas so it
+    // stays in the right place regardless of page layout.
+    const gameContainer = this.game.canvas.parentElement ?? document.body;
+    this.minimap = new Minimap(world, gameContainer);
 
     this.lastSavedPos = { x: Math.round(start.x), y: Math.round(start.y) };
     this.time.addEvent({ delay: 2000, loop: true, callback: () => this.savePosition() });
@@ -155,7 +162,11 @@ export default class GameScene extends Phaser.Scene {
     this.time.addEvent({ delay: 15000, loop: true, callback: () => this.refreshClients() }); // cooldowns end, settings change
     this.currentRegionId = null;
     this.transitions = new TransitionManager();
-    this.events.once('shutdown', () => this.transitions.destroy());
+    this.events.once('shutdown', () => {
+      this.transitions.destroy();
+      this.dayNight?.destroy();
+      this.minimap?.destroy();
+    });
     music.setVolume(getSetting('musicVolume'));
     music.mute(getSetting('musicMuted'));
     this.events.once('shutdown', () => music.stop());
@@ -512,6 +523,8 @@ export default class GameScene extends Phaser.Scene {
   update(time, delta) {
     this.renderer.update(this.cameras.main, time);
     this.weather.update(delta);
+    this.dayNight.update(delta);
+    this.minimap.update(this.player.x, this.player.y, time);
     const overlayUp = this.encounterOpen || isAnyOverlayOpen();
     this.clientNpcs.update(delta / 1000, this.player, { frozen: overlayUp });
     if (overlayUp) {
