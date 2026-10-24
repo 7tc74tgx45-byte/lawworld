@@ -25,10 +25,18 @@ function bankFor(subsection) {
 }
 
 /** First open gap concepts, phrased for the intro. */
-function gapLine(priorGaps) {
-  const concepts = [...new Set((priorGaps ?? []).filter((g) => !g.resolved).map((g) => g.concept).filter(Boolean))].slice(0, 2);
+export function gapLine(priorGaps, memory = []) {
+  const fromSessions = (memory ?? []).flatMap((m) => (typeof m === 'object' && m ? m.gaps ?? [] : []));
+  const all = [...fromSessions, ...(priorGaps ?? []).filter((g) => !g.resolved).map((g) => g.concept)].filter(Boolean);
+  const seen = new Set();
+  const concepts = all.filter((c) => {
+    const k = String(c).trim().toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  }).slice(0, 2);
   if (!concepts.length) return '';
-  return ` Last time this didn't fully land: ${concepts.join('; ')}. Keep it in mind as we go.`;
+  return ` Last time ${concepts.join(' and ')} didn't fully land, so we will meet ${concepts.length > 1 ? 'them' : 'it'} again today.`;
 }
 
 const NOTE_QA = [
@@ -56,7 +64,7 @@ export function createOfflineTutor(opts = {}) {
         const q = bank[6].questions[ctx.mcqIndex];
         return { text: `Question ${ctx.mcqIndex + 1} of ${bank[6].questions.length}: ${q.text}`, options: q.options };
       }
-      return { text: bank[stage].prompt + (stage === 1 ? gapLine(ctx.priorGaps) : ''), modelAnswer: bank[stage].modelAnswer }; // modelAnswer stays inside the engine (hint leak check)
+      return { text: bank[stage].prompt + (stage === 1 ? gapLine(ctx.priorGaps, ctx.memory) : ''), modelAnswer: bank[stage].modelAnswer }; // modelAnswer stays inside the engine (hint leak check)
     },
 
     evaluate(stage, prompt, answer, ctx) {

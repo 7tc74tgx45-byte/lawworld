@@ -33,6 +33,18 @@ export function createEncounter(arg, legacyTutor) {
   const { subsection } = opts;
   let tutor = opts.tutor; // can be swapped by switchTutor() (e.g. "continue offline" after a failed Claude call)
   const priorGaps = Array.isArray(opts.priorGaps) ? opts.priorGaps.map((g) => ({ ...g })) : [];
+  // Memory of earlier sessions (parsed TUTOR-SESSION notes: { date, outcome, gaps[], nextTime[] }), loaded once
+  // before the intro by the injected opts.loadMemory(). A failure just means "no memory".
+  let memory = Array.isArray(opts.memory) ? opts.memory.map((m) => (typeof m === 'object' ? { ...m } : m)) : null;
+  async function ensureMemory() {
+    if (memory || !opts.loadMemory) return; // no loader: leave memory unset so a provider may load it itself
+    try {
+      const m = await opts.loadMemory();
+      memory = Array.isArray(m) ? m : [];
+    } catch {
+      memory = [];
+    }
+  }
   if (!subsection || !tutor) throw new Error('createEncounter needs { subsection, tutor }.');
   // Answer keys from the tutor's generate() stay here, so hints can be checked against them.
   let secret = '';
@@ -82,6 +94,7 @@ export function createEncounter(arg, legacyTutor) {
       notSure: st ? st.notSure : false,
       mcqIndex: state.mcq.index,
       priorGaps: priorGaps.map((g) => ({ ...g })),
+      memory: memory ? memory.map((m) => (typeof m === 'object' ? { ...m } : m)) : undefined,
       exchanges: state.exchanges,
       ...extra,
     };
@@ -275,6 +288,7 @@ export function createEncounter(arg, legacyTutor) {
     if (pendingOpen !== null) return out(await openPrompt(pendingOpen));
     if (!state.current) {
       state.stage = 1;
+      await ensureMemory();
       const p = await tutor.generate(1, ctx());
       state.current = { stage: 1, kind: 'info', text: p.text };
       state.introShown = true;

@@ -29,8 +29,11 @@ export function contextBlock({ subsection, noteSection, noteNote, priorSessions 
   return parts.join('\n\n');
 }
 
-export function introPrompt(block) {
-  return `${block}\n\nTASK: Write the INTRO for this subsection: 2 to 3 sentences setting the scene (why it matters, and how it links to what usually comes before). If there are open gaps or earlier-session notes, mention one of them naturally ("Last time ... didn't land"). Do not ask a question and do not teach the answers.\n${JSON_ONLY} Schema: {"text": string}`;
+export function introPrompt(block, { hasMemory = false } = {}) {
+  const memory = hasMemory
+    ? ' The context lists EARLIER SESSIONS and/or OPEN GAPS: you MUST refer to at least one of them by name, in the register of your persona, e.g. "Last time the postal rule exceptions didn\'t land, so we will meet them again today." Mention only what those lists actually say; never invent what happened.'
+    : ' There is no earlier session on this subsection, so do not pretend there was one.';
+  return `${block}\n\nTASK: Write the INTRO for this subsection: 2 to 3 sentences setting the scene (why it matters, and how it links to what usually comes before).${memory} Do not ask a question and do not teach the answers.\n${JSON_ONLY} Schema: {"text": string}`;
 }
 
 export function questionPrompt(block, stage, { avoid = [] } = {}) {

@@ -509,3 +509,46 @@ What I changed this session:
 - **Tutor picker:** There is no tutor picker yet, which is T09. The preference is read from the save, defaulting to Hale.
 
 **Next:** T08 writes the TUTOR-SESSION note when an encounter ends. T09 adds the study door with the tutor picker and `chooseMode`.
+
+## T08 — done — 2026-10-24 02:22:47
+Cost $1.20 · 6 min · attempt 1
+
+**What changed:** The game now writes a `TUTOR-SESSION-YYYY-MM-DD-HHMM-<subsectionId>.md` note when an encounter ends. It also reads earlier session notes for that subsection when an encounter starts. `npm run build` passes and `npm test` passes (164 tests, 17 of them new). I couldn't run a browser or reach a real Obsidian here, so the write and read were only tested with fake vault functions.
+
+**Writing a note**
+- Where: `src/logic/sessionNote.js` has the filename builder and note formatter. `src/api/sessionNotes.js` does the writing.
+- Frontmatter: date, time, module, district, subsection, title, tutor, outcome, finished, checkpoint.
+- Sections: Covered, Landed, Gaps and Next time.
+  - **Covered:** the verdict per stage, with follow-up and hint counts, the IRAC score and the checkpoint score.
+  - **Landed:** the concepts the tutor credited that are not also gaps.
+  - **Gaps:** the missed concepts, each with its stage.
+  - **Next time:** a retrieval question on the gaps, stages still to answer, and what must come out solid to consolidate.
+- Content: no transcript and no note prose, only the tutor's verdicts and concept labels.
+- Safety: the filename always passes `checkWritePath`, and `assertWritable` runs again before the write. `writeNote` in `obsidian.js` is unchanged and still refuses anything else.
+- Trigger: `GameScene.recordEncounter` calls it once per encounter, at the verdict or on Leave.
+- Skipped writes: if nothing was answered, no note is written. If Obsidian has no token, nothing is written and the banner says so. If the write fails, the banner shows the reason and the local save is unaffected.
+
+**Memory at the start**
+- Lookup: `loadPriorSessions` calls `listFiles`, matches the exact subsection id, keeps the newest two notes and parses their Gaps and Next time.
+- Matching bug fixed: `sessionFilesFor` used to match on a suffix, so subsection `b` would pick up `a.b`'s notes. It now uses a strict pattern.
+- Claude tutor: it receives the memory and its intro prompt now requires naming an earlier gap. If there is no memory, the prompt says not to pretend there was one.
+- Offline tutor: it says "Last time X didn't fully land, so we will meet it again today." This draws on the session-note gaps and on gaps stored in the save.
+- Engine: `createEncounter` takes an optional `loadMemory()`, called once before the intro. A failure there just means no memory.
+
+**Try it:** Put the Obsidian URL and token in Settings. Press Esc, then Settings, and use "Test Obsidian connection".
+
+1. Run `npm run dev`, walk to the grey "Contract Law" box and press E.
+2. Answer a few stages, then Leave. The banner should say "Session note saved: TUTOR-SESSION-…-contract-offer-acceptance.md". Check that file in the vault.
+3. Open the same box again. The intro should say "Last time … didn't fully land", naming a gap from that note.
+
+Without a token, the banner says no session note was written.
+
+**Design notes:** - **Demo subsection:** The demo "Contract Law" box has no place in the curriculum, so `module` is "Contract Law" and `district` is empty in its notes. Real subsections will fill both in once T09 opens them. The same applies to memory: it is keyed on the subsection id, which is the demo's own id for now.
+- **Wording of the offline intro:** "Last time X didn't fully land" is built from stored gap labels, so the sentence can read a little stiffly for long concept names.
+- **Where "Landed" comes from:** it comes from the tutor's `conceptsHit` labels. That is only as accurate as the tutor's judgement. The offline evaluator's labels are coarse.
+- **Several notes in one minute:** two notes for the same subsection in the same minute would have the same filename, so the later one overwrites the earlier. That is unlikely, because an encounter takes at least 10 minutes.
+- **Leave-after-verdict:** it does not write a second note. Writing happens once, at the verdict or on Leave.
+- **Memory lines:** I did not add the earlier note's outcome text to what the player sees. The memory goes to the tutor, and the intro mentions it.
+- **Error text:** the banner shows raw error text from a failed write.
+
+**Next:** T09 builds the world from the curriculum and adds the study door, with the tutor picker and `chooseMode`. That will make session notes carry real module and district names and use Claude with live notes.

@@ -79,7 +79,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Encounter end writes the result into progress + save.
   - Done when a full encounter can be played start to finish in offline mode.
 
-- [ ] **T08 — Session write-back and memory**
+- [x] **T08 — Session write-back and memory**
   - On encounter end, write `TUTOR-SESSION-YYYY-MM-DD-HHMM-<subsectionId>.md` via the guarded `writeNote` (frontmatter: date, module, district, subsection, tutor, outcome; sections: Covered, Landed, Gaps, Next time).
   - On encounter start, find prior session notes for that subsection (`listFiles` + filter) and include their Gaps/Next time in tutor context; the intro should reference them ("Last time the postal rule exceptions didn't land…").
   - Tests for the note formatter and filename builder.

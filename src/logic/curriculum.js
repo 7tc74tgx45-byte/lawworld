@@ -58,6 +58,19 @@ export function findSubsection(curriculum, id) {
   return subsectionIndex(curriculum).get(id) || null;
 }
 
+/** { module, region, district, subsection } for a subsection id, or null (e.g. the demo subsection). */
+export function locateSubsection(curriculum, id) {
+  for (const module of curriculum.modules ?? []) {
+    for (const region of module.regions ?? []) {
+      for (const district of region.districts ?? []) {
+        const subsection = district.subsections.find((s) => s.id === id);
+        if (subsection) return { module, region, district, subsection };
+      }
+    }
+  }
+  return null;
+}
+
 /** Returns an id path forming a cycle, or null. */
 export function findCycle(subsections) {
   const byId = new Map(subsections.map((s) => [s.id, s]));

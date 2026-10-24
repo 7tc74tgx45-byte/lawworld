@@ -4,6 +4,7 @@ import { openOverlay, setOverlayHandlers, isAnyOverlayOpen } from '../ui/dom.js'
 import { openSettings } from '../ui/settings.js';
 import { downloadSave, pickAndImportSave } from '../ui/saveAdapter.js';
 import { createOfflineTutor } from '../api/offlineTutor.js';
+import { writeSessionNote, loadPriorSessions } from '../api/sessionNotes.js';
 import { hasOfflineBank } from '../data/offlineBank.js';
 import { getClaudeKey } from '../api/claude.js';
 import { getObsidianConfig } from '../api/obsidian.js';
@@ -156,12 +157,15 @@ export default class GameScene extends Phaser.Scene {
     // The demo subsection has no vault heading, so Claude can only be used for real curriculum subsections.
     // Until the world is generated from the curriculum (T09) the demo always runs offline.
     void mode;
+    const hasObsidian = !!getObsidianConfig().token;
     let recorded = false;
     openEncounter({
       subsection: sub,
       tutor: makeOfflineTutor(),
       makeOfflineTutor,
       priorGaps: openGaps(this.saveStore.state.progress, { subsectionId: sub.id }),
+      // Memory: earlier TUTOR-SESSION notes for this subsection (needs Obsidian; without it there is no memory).
+      loadMemory: hasObsidian ? () => loadPriorSessions(sub) : undefined,
       // The encounter's end writes its result into progress + save exactly once:
       // on the verdict (onFinish), or when the player leaves early (onClose, not finished).
       onFinish: (res) => {
@@ -183,7 +187,20 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
     const gaps = res.gaps.length;
-    this.showBanner(`${sub.title}: ${res.outcome.toUpperCase()}${gaps ? ` (${gaps} gap${gaps > 1 ? 's' : ''} logged)` : ''}`);
+    const base = `${sub.title}: ${res.outcome.toUpperCase()}${gaps ? ` (${gaps} gap${gaps > 1 ? 's' : ''} logged)` : ''}`;
+    this.showBanner(base);
+    this.writeSession(sub, res, base);
+  }
+
+  /** Write the TUTOR-SESSION note (guarded) once per encounter. Never blocks or breaks the game. */
+  async writeSession(sub, res, base) {
+    if (!getObsidianConfig().token) {
+      this.showBanner(`${base}. Obsidian is not connected, so no session note was written.`);
+      return;
+    }
+    const r = await writeSessionNote({ subsection: sub, result: res });
+    if (r.ok) this.showBanner(`${base}. Session note saved: ${r.filename}`, 9000);
+    else if (!r.skipped) this.showBanner(`${base}. Could not write the session note (${r.error}).`, 9000);
   }
 
   showBanner(text, ms = 6000) {

@@ -1,5 +1,7 @@
 // Pure helpers for reading study notes (no DOM, no fetch).
 
+import { isSessionFileFor } from './sessionNote.js';
+
 const HEADING_RX = /^(#{1,6})\s+(.*?)\s*#*\s*$/;
 
 /** Normalise heading text for matching: drop emphasis markers, wikilink brackets, case and trailing colons. */
@@ -65,10 +67,9 @@ export function clipText(text, maxChars = 9000) {
 
 /** Filenames of TUTOR-SESSION notes for one subsection, newest first (name has date-time then id). */
 export function sessionFilesFor(files, subsectionId) {
-  const suffix = `-${subsectionId}.md`;
   return (files ?? [])
     .map((f) => String(f))
-    .filter((f) => f.startsWith('TUTOR-SESSION-') && f.endsWith(suffix))
+    .filter((f) => isSessionFileFor(f, subsectionId))
     .sort()
     .reverse();
 }

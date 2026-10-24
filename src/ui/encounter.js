@@ -18,9 +18,9 @@ export function isEncounterOpen() {
   return !!active;
 }
 
-export function openEncounter({ subsection, tutor, priorGaps, onOpen, onClose, onFinish, makeOfflineTutor }) {
+export function openEncounter({ subsection, tutor, priorGaps, loadMemory, onOpen, onClose, onFinish, makeOfflineTutor }) {
   if (active) return active;
-  const engine = createEncounter({ subsection, tutor, priorGaps });
+  const engine = createEncounter({ subsection, tutor, priorGaps, loadMemory });
   let busy = false;
   let closed = false;
   let mode = 'answer'; // 'answer' | 'ask'

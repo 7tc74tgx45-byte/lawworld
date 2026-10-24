@@ -6,7 +6,9 @@
 import { callClaude } from './claude.js';
 import { readNote as obsidianRead, listFiles as obsidianList } from './obsidian.js';
 import { getPersona, personaSystemPrompt } from '../data/tutors.js';
-import { extractSection, sessionFilesFor } from '../logic/notes.js';
+import { extractSection } from '../logic/notes.js';
+import { loadPriorSessions } from './sessionNotes.js';
+import { formatSessionMemory } from '../logic/sessionNote.js';
 import { parseWithRepair, REPAIR_PROMPT, cleanPrompt, cleanEvaluation, cleanText } from '../logic/tutorJson.js';
 import {
   contextBlock, introPrompt, questionPrompt, mcqPrompt, evaluatePrompt, hintPrompt, mcqHintPrompt,
@@ -24,6 +26,7 @@ export function sessionDigest(markdown) {
   }
   return parts.join(' | ');
 }
+// Memory loading itself lives in src/api/sessionNotes.js (loadPriorSessions), shared with the game scene.
 
 /**
  * createClaudeTutor({ personaId, call?, readNote?, listFiles?, model? }) -> tutor
@@ -77,16 +80,9 @@ export function createClaudeTutor(opts = {}) {
         noteSection = md;
         noteNote = `heading "${sub.heading}" was not found, so the whole note is supplied`;
       }
-      let priorSessions = [];
-      try {
-        const files = sessionFilesFor(await listFiles(), sub.id).slice(0, 2);
-        for (const f of files) {
-          try {
-            const d = sessionDigest(await readNote(f));
-            if (d) priorSessions.push(d);
-          } catch { /* a missing session note is not fatal */ }
-        }
-      } catch { /* listing failed: carry on without memory */ }
+      // The scene may already have loaded earlier sessions (ctx.memory); otherwise read them here. Failure = no memory.
+      const sessions = Array.isArray(ctx.memory) ? ctx.memory : await loadPriorSessions(sub, { listFiles, readNote });
+      const priorSessions = sessions.map((s) => formatSessionMemory(s)).filter(Boolean);
       entry = { base: { subsection: sub, noteSection, noteNote, priorSessions }, mcq: null, secrets: new Map() };
       cache.set(sub.id, entry);
     }
@@ -116,7 +112,8 @@ export function createClaudeTutor(opts = {}) {
     async generate(stage, ctx) {
       const { entry, block } = await load(ctx);
       if (stage === 1) {
-        const o = await askJson(introPrompt(block), (x) => cleanText(x));
+        const hasMemory = entry.base.priorSessions.length > 0 || (ctx.priorGaps ?? []).some((g) => !g.resolved);
+        const o = await askJson(introPrompt(block, { hasMemory }), (x) => cleanText(x));
         return { text: o.text };
       }
       if (stage === 6) {
