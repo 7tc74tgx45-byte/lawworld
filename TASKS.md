@@ -245,3 +245,17 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Implemented in `src/ui/encounter.js` — intercepts `/search ` prefix in `doSubmit`, calls `searchNotes()` from `src/api/obsidian.js`, renders results inline.
   - Offline gracefully: if Obsidian is unreachable, shows the error message from the API call.
   - Done: 2026-10-24.
+
+- [ ] **T101 — Case Library buildings (case-law MCQ from vault)**
+  - Why: a dedicated building per district where you can drill on cases at any time — no prerequisites, always open. Draws on every case in the vault notes for that module, testing in both directions: case name → rule/facts, and facts/holding → case name.
+  - Vault source: parse all study notes for the module (e.g. `LAW7054-*.md`) and extract the case table rows. Each row typically follows the pipe-table format `| *Case Name* [year] | Principle |` used in Poole-Ch2 and similar notes. The parser grabs every row where the first cell looks like a case citation (italic text, year in brackets).
+  - Question types (MCQ, 4 options):
+    1. **Name → rule:** "What principle does *Hyde v Wrench* establish?" — 3 plausible distractors drawn from other cases in the same note or chapter.
+    2. **Rule → name:** "Which case holds that a counter-offer destroys the original offer?" — 3 other case names as distractors.
+    3. **Facts → name (harder):** a one-line fact pattern from the case, player picks the case name. Unlocks after first pass through a note.
+  - Building: library aesthetic — bookshelves, reading desks, warm lamp light. One Case Library per district, placed near the lecture buildings. Always unlocked from the start (no consolidation prerequisite). Door label: "Case Library — N cases".
+  - Session flow: player picks a module/note to drill (or "All cases" for the whole district). Questions fire in random order, MCQ buttons A–D. After each answer: immediate right/wrong feedback with the correct principle shown. No tutor AI call — all logic is local. Seeds + stats awarded per correct answer (same rate as checkpoint questions).
+  - Progress: tracks which cases have been answered correctly at least once per session. A "mastered" chip appears on the door when all cases in a note have been answered correctly in a single session. No persistent unlock state — the library is always open for drilling.
+  - Offline: vault notes are needed to build the question bank. If Obsidian is unreachable, show "Vault offline — connect Obsidian to access the Case Library." Same pattern as Workshop offline handling.
+  - Tests: case parser extracts correct name and principle from a sample pipe-table note; distractor picker never returns the correct answer as a distractor; question bank deduplicates cases that appear in multiple notes; "All cases" mode includes cases from every matched note; offline path shows the right message and does not crash.
+  - Done when: `npm run build` and `npm test` pass; with the Poole-Ch2 note in the vault, the Case Library in the Contract district shows the correct case count, entering runs a round of MCQ on those cases, and correct answers award seeds.
