@@ -10,7 +10,7 @@ import { createClaudeTutor } from '../api/tutor.js';
 import { writeSessionNote, loadPriorSessions } from '../api/sessionNotes.js';
 import { hasOfflineBank } from '../data/offlineBank.js';
 import { getClaudeKey } from '../api/claude.js';
-import { getObsidianConfig } from '../api/obsidian.js';
+import { getObsidianConfig, listFiles as obsidianListFiles } from '../api/obsidian.js';
 import { curriculum } from '../data/curriculum.js';
 import { allDistricts, findSubsection, locateSubsection } from '../logic/curriculum.js';
 import { computeStates, openGaps } from '../logic/progress.js';
@@ -121,7 +121,14 @@ export default class GameScene extends Phaser.Scene {
     this.garden = new Garden(this, world);
     this.garden.refresh(this.saveStore.state);
     this.time.addEvent({ delay: 30000, loop: true, callback: () => this.garden.refresh(this.saveStore.state) }); // plants wither with time
+    this.vaultNotes = new Set(); // populated async below; refreshed on every encounter end
     this.refreshStates();
+    // Fetch vault file list to unlock buildings whose notes are present, regardless of prerequisites.
+    // (Coursework-only assessment: sequential gates have no pedagogical value for current-week content.)
+    obsidianListFiles().then((files) => {
+      this.vaultNotes = new Set(files);
+      this.refreshStates();
+    }).catch(() => { /* vault offline — locked/available state falls back to prerequisite gating */ });
     // Client NPCs (T12): one per region while something there is explored. A served client leaves for 5 minutes.
     this.clientNpcs = new ClientNpcs(this, world, { canServe: canServeClient });
     this.refreshClients();
@@ -170,7 +177,7 @@ export default class GameScene extends Phaser.Scene {
   /** Recompute building colours and braziers from progress. */
   refreshStates() {
     const progress = this.saveStore.state.progress;
-    this.states = computeStates(curriculum, progress);
+    this.states = computeStates(curriculum, progress, { vaultNotes: this.vaultNotes });
     // Braziers stay lit once earned (saved), even if the vault later adds a building to the district.
     const synced = syncBraziers(this.saveStore.state, this.districtList, this.states);
     if (synced.newlyLit.length) {

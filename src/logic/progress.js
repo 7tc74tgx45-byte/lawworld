@@ -74,20 +74,33 @@ export function unmetPrerequisites(curriculumOrIndex, progress, id) {
   return sub.prerequisites.filter((p) => !unlocked.has(storedStatus(progress, p)));
 }
 
-/** locked | available | explored | consolidated. Unknown ids are 'locked'. */
-export function subsectionState(curriculumOrIndex, progress, id) {
+/** locked | available | explored | consolidated. Unknown ids are 'locked'.
+ * vaultNotes (optional Set<string>) — filenames present in the vault. When provided,
+ * any subsection whose sourceFile is in the vault is treated as 'available' regardless
+ * of unmet prerequisites. This lets the player jump straight to their current week's
+ * content without grinding through earlier districts they've already studied in seminars.
+ */
+export function subsectionState(curriculumOrIndex, progress, id, { vaultNotes } = {}) {
   const index = indexOf(curriculumOrIndex);
   if (!index.has(id)) return 'locked';
   const stored = storedStatus(progress, id);
   if (stored === 'consolidated' || stored === 'explored') return stored;
+  // Vault-unlock: if the note for this district is in the vault, skip prerequisite gate.
+  if (vaultNotes) {
+    const sourceFile = index.get(id)?.sourceFile;
+    if (sourceFile && vaultNotes.has(sourceFile)) return 'available';
+  }
   return unmetPrerequisites(index, progress, id).length ? 'locked' : 'available';
 }
 
-/** { [id]: state } for every subsection in the curriculum. */
-export function computeStates(curriculum, progress) {
+/** { [id]: state } for every subsection in the curriculum.
+ * vaultNotes (optional Set<string>) — when supplied, buildings whose vault note is
+ * present are available regardless of prerequisites (see subsectionState).
+ */
+export function computeStates(curriculum, progress, { vaultNotes } = {}) {
   const index = subsectionIndex(curriculum);
   const out = {};
-  for (const id of index.keys()) out[id] = subsectionState(index, progress, id);
+  for (const id of index.keys()) out[id] = subsectionState(index, progress, id, { vaultNotes });
   return out;
 }
 
