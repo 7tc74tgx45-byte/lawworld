@@ -303,7 +303,7 @@ export default class GameScene extends Phaser.Scene {
         let parsed = null;
         try {
           const raw = await readNote(b.workshopFile);
-          parsed = parseWorkshopNote(raw);
+          parsed = parseWorkshopNote(raw, b.workshopFile);
         } catch (err) {
           console.warn('[Workshop] Failed to load note:', err);
         }

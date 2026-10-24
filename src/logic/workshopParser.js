@@ -27,18 +27,48 @@
  *
  * Returns null if the note does not look like a workshop prep file.
  */
-export function parseWorkshopNote(markdown) {
+export function parseWorkshopNote(markdown, filename = '') {
   const text = String(markdown ?? '');
   const lines = text.split(/\r?\n/);
 
   // ── Title ──────────────────────────────────────────────────────────────────
+  // Accept any # heading that contains "workshop" or "prep" (case-insensitive).
+  // Extract the descriptive topic portion using several patterns:
+  //   "# Workshop Prep — Breach of Duty"   → "Breach of Duty"
+  //   "# LAW7054 — Workshop 3: Certainty…" → "Certainty…"
+  //   "# LAW7054 Workshop – Duty of Care"  → "Duty of Care"
+  //   "# Botsche… — Workshop Prep"         → "Botsche… — Workshop Prep" (fallback)
   let title = '';
   for (const ln of lines) {
-    const m = /^#\s+Workshop Prep\s*[—–-]\s*(.+)$/i.exec(ln.trim());
+    const t = ln.trim();
+    if (!/^#\s/.test(t)) continue;
+    const heading = t.replace(/^#+\s*/, '');
+    if (!/workshop|prep/i.test(heading)) continue;
+    // Pattern 1: "Workshop Prep — {topic}" or "Workshop Prep: {topic}"
+    let m = /^Workshop Prep\s*[—–:\-]\s*(.+)$/i.exec(heading);
     if (m) { title = m[1].trim(); break; }
+    // Pattern 2: "LAW#### — Workshop N: {topic}" or "LAW#### — Workshop N Prep: {topic}"
+    m = /^LAW\d+\s*[—–]\s*(?:Chapter\s*\d+\s*)?Workshop\s*(?:Prep\s*[:\-]?\s*|\d+\s*[:\-]\s*)(.+)$/i.exec(heading);
+    if (m) { title = m[1].trim(); break; }
+    // Pattern 3: "LAW#### Workshop N — {topic}"
+    m = /^LAW\d+\s+Workshop\s*\d*\s*[—–\-]\s*(.+)$/i.exec(heading);
+    if (m) { title = m[1].trim(); break; }
+    // Pattern 4: "{case name} — Workshop Prep" (e.g. Botsche case)
+    m = /^(.+)\s*[—–]\s*Workshop Prep$/i.exec(heading);
+    if (m) { title = m[1].trim(); break; }
+    // Fallback: use the whole heading minus the LAW#### prefix
+    title = heading.replace(/^LAW\d+\s*[—–]?\s*/i, '').trim() || heading;
+    break;
   }
-  // Not a workshop note if no matching title
-  if (!title) return null;
+  // Also accept notes that have ## Scenario sections even without a matching title
+  const hasScenarios = lines.some(ln => /^##\s+(?:Scenario|Question)\s+\d+/i.test(ln));
+  if (!title && !hasScenarios) return null;
+  if (!title) {
+    // Derive a readable title from the filename if provided
+    // e.g. "LAW7054-Tort-W5-Workshop-Prep.md" → "Tort W5"
+    const fnm = /^LAW\d+-([A-Za-z]+(?:-[A-Za-z]+)*)-W(\d+)-Workshop/i.exec(filename);
+    title = fnm ? `${fnm[1].replace(/-/g, ' ')} W${fnm[2]}` : 'Workshop';
+  }
 
   // ── Split into top-level ## sections ──────────────────────────────────────
   // We collect line ranges for each ## heading at level 2.
@@ -57,7 +87,7 @@ export function parseWorkshopNote(markdown) {
     const sectionLines = lines.slice(startLine + 1, endLine); // exclude the ## heading itself
 
     // ── Scenario sections ───────────────────────────────────────────────────
-    const scenarioMatch = /^Scenario\s+\d+\s*:\s*(.+)$/i.exec(name);
+    const scenarioMatch = /^(?:Scenario|Question)\s+\d+\s*[:\u2014\u2013-]\s*(.+)$/i.exec(name);
     if (scenarioMatch) {
       const scenarioName = scenarioMatch[1].trim();
       // Split at the first analysis line: **Issue:, **Conclusion:, or **BoldHeader — (e.g. Angela — standard of care)
