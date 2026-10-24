@@ -650,3 +650,26 @@ Cost $1.49 · 12 min · attempt 1
 - **Weather and cat are drawn from `GameScene.update`:** they hold no state of their own beyond the save's `cat` position.
 
 **Next:** T11 (journal). Once you've seen the game in the browser, tune the cat's follow distance and speed, and the particle counts, in `CAT` in `src/logic/cat.js` and `WEATHER` in `src/logic/weather.js`.
+
+## T11 — done — 2026-10-24 03:19:33
+Cost $0.89 · 4 min · attempt 1
+
+**What changed:** Pressing Tab in the world opens a Journal screen. It is also in the Esc menu. Tab or Esc closes it. I couldn't run the game in a browser overnight, so the layout hasn't been seen on screen. `npm run build` and `npm test` pass (202 tests, 8 new in `tests/journal.test.js`).
+
+The journal has four parts:
+- **Stats:** four bars (Case Recall, Statutory Interpretation, Application, IRAC Fluency), each showing level and progress to the next level.
+- **Your map:** a collapsible tree of module, then district, then subsection. Each subsection shows locked, available, explored or consolidated, and how many open gaps it has. A locked one shows what unlocks it when you hover. A district with its brazier lit shows a flame.
+- **Things to revisit:** open gaps as clickable chips, most-missed first. Clicking one shows the building, the module and district, the note file and heading, how often it was missed, the stage where it first appeared, and when it was last seen. It also says that a solid answer on that concept clears the gap.
+- **Last sessions:** the 10 most recent encounters, with outcome, tutor, number of exchanges, "left early", and gap count. Hovering shows the gap concepts.
+
+**Try it:** Run `npm run dev`. Play or leave an encounter in any building that has an offline bank, for example the first Contract subsection, then press Tab in the world. You should see stats move after a solid answer, the building's state change in the map, and the session appear in the list. Any missed concepts appear under Things to revisit. Open and close the journal with Tab or Esc, and check W/A/S/D stop moving the player while it is open.</how_to_try_it>
+<parameter name="design_notes">- **Session log in the save:** "Last 10 sessions" needed a record that works without Obsidian, so the save now has an optional `sessions` list, capped at 50. Older saves load with an empty list, so I didn't bump `version`. The log uses the outcome recomputed from the stage verdicts, never the outcome the encounter claims. Opening and leaving without answering anything logs nothing.
+- **Journal is read-only:** it changes no progress, so it can't be used to skip the learning loop.
+- **Gaps for removed buildings:** if the curriculum changes and a gap points at a building that no longer exists, the gap stays in the list and is flagged instead of breaking the screen.
+- **Layout and Tab:** the screen's layout is untested visually. I did not test that Tab stays out of browser focus navigation. The key is captured and the overlay swallows it.
+- **Click-to-walk:** a gap's detail names the building but can't send you there. A map marker or fast travel would be a later addition.
+- **Garden and clients:** T12 and T13 will want to add gap-driven items to this screen.
+
+**Design notes:** —
+
+**Next:** T12 (client NPCs). Once you've seen the journal in the browser, tune the spacing and colours in the "Journal (Tab)" block of `src/style.css`.

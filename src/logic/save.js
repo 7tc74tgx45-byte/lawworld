@@ -11,8 +11,10 @@
 //     garden:   { plots:[{ id, seedId, subsectionId, concept, stage, plantedAt, lastWatered }] },
 //     braziers: { lit: [districtId] },
 //     tutorPreference: { [subsectionId]: tutorId },
-//     settings: { ...non-secret gameplay preferences }
+//     settings: { ...non-secret gameplay preferences },
+//     sessions: [{ subsectionId, title, module, date, tutor, outcome, finished, exchanges, gaps, gapConcepts }]  // capped log for the journal (T11)
 //   }
+// `sessions` was added without a version bump: it is optional and normalised to [] for older saves.
 // Secrets (Claude key, Obsidian token) are NOT part of a save: they live in src/settings.js, and a
 // save file is something Fynn may export, share or paste somewhere. Anything key-like is stripped.
 //
@@ -22,6 +24,7 @@
 //  - import is stricter than load: it reports *why* a file was rejected, and changes nothing.
 
 import { createProgress, normaliseProgress } from './progress.js';
+import { normaliseSessions } from './sessionLog.js';
 
 export const SAVE_VERSION = 1;
 export const SAVE_KEY = 'lawworld.save';
@@ -119,6 +122,7 @@ export function normaliseSave(raw, now) {
     braziers: { lit: [...new Set((Array.isArray(braziers.lit) ? braziers.lit : []).filter((x) => typeof x === 'string' && x))] },
     tutorPreference: Object.fromEntries(Object.entries(tp).filter(([k, v]) => k && typeof v === 'string' && v)),
     settings: normaliseSettings(s.settings),
+    sessions: normaliseSessions(s.sessions),
   };
 }
 

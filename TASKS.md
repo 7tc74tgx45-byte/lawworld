@@ -99,7 +99,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Player: law student with messenger bag, 4 directions × 2-frame walk.
   - Cat companion: follows with a short delay along the player's path, idles (sit, tail flick), sits next to the player during encounters.
 
-- [ ] **T11 — Journal and stats screen (Tab)**
+- [x] **T11 — Journal and stats screen (Tab)**
   - Stats bars; per-module tree of districts/subsections with states; "Things to revisit" gap list (click to see the concept and which building it's in); last 10 sessions.
 
 - [ ] **T12 — Client NPCs**

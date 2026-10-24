@@ -3,6 +3,7 @@ import { openEncounter } from '../ui/encounter.js';
 import { openOverlay, setOverlayHandlers, isAnyOverlayOpen } from '../ui/dom.js';
 import { openSettings } from '../ui/settings.js';
 import { openDoorPanel } from '../ui/doorPanel.js';
+import { openJournal } from '../ui/journal.js';
 import { downloadSave, pickAndImportSave, getSaveStore } from '../ui/saveAdapter.js';
 import { createOfflineTutor } from '../api/offlineTutor.js';
 import { createClaudeTutor } from '../api/tutor.js';
@@ -77,10 +78,11 @@ export default class GameScene extends Phaser.Scene {
     });
     this.eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this.tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
     this.captureCodes = [
       Phaser.Input.Keyboard.KeyCodes.W, Phaser.Input.Keyboard.KeyCodes.A, Phaser.Input.Keyboard.KeyCodes.S, Phaser.Input.Keyboard.KeyCodes.D,
       Phaser.Input.Keyboard.KeyCodes.UP, Phaser.Input.Keyboard.KeyCodes.DOWN, Phaser.Input.Keyboard.KeyCodes.LEFT, Phaser.Input.Keyboard.KeyCodes.RIGHT,
-      Phaser.Input.Keyboard.KeyCodes.SPACE, Phaser.Input.Keyboard.KeyCodes.E,
+      Phaser.Input.Keyboard.KeyCodes.SPACE, Phaser.Input.Keyboard.KeyCodes.E, Phaser.Input.Keyboard.KeyCodes.TAB,
     ];
 
     this.encounterOpen = false;
@@ -101,7 +103,7 @@ export default class GameScene extends Phaser.Scene {
       .text(400, 90, '', { fontSize: '30px', fontStyle: 'bold', fill: '#ffffff', stroke: '#000000', strokeThickness: 5, align: 'center' })
       .setOrigin(0.5).setScrollFactor(0).setDepth(100001).setAlpha(0);
     this.add
-      .text(8, 8, 'WASD / Arrows to move · E at a door · Esc menu', { fontSize: '12px', fill: '#ffffff', backgroundColor: '#00000066', padding: { x: 4, y: 2 } })
+      .text(8, 8, 'WASD / Arrows to move · E at a door · Tab journal · Tab journal · Esc menu', { fontSize: '12px', fill: '#ffffff', backgroundColor: '#00000066', padding: { x: 4, y: 2 } })
       .setScrollFactor(0).setDepth(100000);
 
     this.refreshStates();
@@ -249,6 +251,12 @@ export default class GameScene extends Phaser.Scene {
     this.bannerTimer = this.time.delayedCall(ms, () => this.banner.setText(''));
   }
 
+  /** Tab: the journal (stats, map, things to revisit, recent sessions). Read-only: it never changes progress. */
+  openJournalScreen() {
+    if (isAnyOverlayOpen()) return;
+    openJournal({ curriculum, save: this.saveStore.state });
+  }
+
   openMenu() {
     if (isAnyOverlayOpen()) return;
     const { panel, close } = openOverlay({ panelClass: 'small', onEscape: () => close() });
@@ -297,6 +305,10 @@ export default class GameScene extends Phaser.Scene {
     if (this.encounterOpen || isAnyOverlayOpen()) {
       this.prompt.setVisible(false);
       this.animateCharacters(delta, false);
+      return;
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.tabKey)) {
+      this.openJournalScreen();
       return;
     }
     if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
