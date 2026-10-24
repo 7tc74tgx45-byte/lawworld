@@ -93,7 +93,7 @@ Read `docs/VISION.md` before any task. Mechanics come first; art comes later.
   - Building colours show state (locked / available / explored / consolidated).
   - Keep world generation logic pure and tested (`src/logic/layout.js`: no overlapping buildings, every door reachable from the hub).
 
-- [ ] **T10 — Seasons, sprites and the cat**
+- [x] **T10 — Seasons, sprites and the cat**
   - Generated-texture pixel art: grass/flower/sand/snow tiles per season, trees per season, buildings with roofs and doors.
   - Weather particles per region (petals, sun motes, falling leaves, snow) that switch when the player crosses a region border.
   - Player: law student with messenger bag, 4 directions × 2-frame walk.

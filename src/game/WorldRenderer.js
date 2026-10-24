@@ -2,7 +2,7 @@
 // signpost and brazier sprites. Collision itself is pure (src/logic/worldQuery.js); nothing here is physics.
 import { TILE_SIZE } from '../logic/worldQuery.js';
 import { drawTile } from './tileDraw.js';
-import { makeBuildingTextures, makeFurnitureTextures, buildingKey } from './sprites.js';
+import { ensureBuildingTexture, makeFurnitureTextures, makeCharacterTextures, makeWeatherTextures } from './sprites.js';
 
 const CHUNK_TILES = 16;
 const CHUNK_PX = CHUNK_TILES * TILE_SIZE;
@@ -16,10 +16,18 @@ export default class WorldRenderer {
     this.chunkRows = Math.ceil(world.rows / CHUNK_TILES);
     this.buildingSprites = new Map(); // id -> Image
     this.braziers = new Map(); // districtId -> Image
-    this.stateKey = new Map();
-    makeBuildingTextures(scene);
+    this.lit = new Set();
+    this.flame = 0;
+    this.seasonOf = new Map(world.regions.map((r) => [r.id, r.season]));
     makeFurnitureTextures(scene);
+    makeCharacterTextures(scene);
+    makeWeatherTextures(scene);
+    this.stateKey = new Map();
     this.addFurniture();
+  }
+
+  buildingTexture(b, state) {
+    return ensureBuildingTexture(this.scene, state, b.side, this.seasonOf.get(b.regionId) ?? 'spring');
   }
 
   addFurniture() {
@@ -30,7 +38,7 @@ export default class WorldRenderer {
       this.braziers.set(d.id, br);
     }
     for (const b of world.buildings) {
-      const spr = scene.add.image(b.tx * TILE_SIZE, b.ty * TILE_SIZE, buildingKey('locked', b.side)).setOrigin(0).setDepth(b.ty * TILE_SIZE + 64);
+      const spr = scene.add.image(b.tx * TILE_SIZE, b.ty * TILE_SIZE, this.buildingTexture(b, 'locked')).setOrigin(0).setDepth(b.ty * TILE_SIZE + 64);
       this.buildingSprites.set(b.id, spr);
     }
   }
@@ -41,10 +49,15 @@ export default class WorldRenderer {
       const s = states[b.id] ?? 'locked';
       if (this.stateKey.get(b.id) === s) continue;
       this.stateKey.set(b.id, s);
-      this.buildingSprites.get(b.id).setTexture(buildingKey(s, b.side));
+      this.buildingSprites.get(b.id).setTexture(this.buildingTexture(b, s));
     }
+    this.lit = new Set(litDistricts);
+    this.paintBraziers();
+  }
+
+  paintBraziers() {
     for (const [id, img] of this.braziers) {
-      const key = litDistricts.has(id) ? 'brazier-lit' : 'brazier-unlit';
+      const key = this.lit.has(id) ? `brazier-lit-${this.flame}` : 'brazier-unlit';
       if (img.texture.key !== key) img.setTexture(key);
     }
   }
@@ -54,13 +67,12 @@ export default class WorldRenderer {
     const key = `chunk-${cx}-${cy}`;
     const tex = scene.textures.createCanvas(key, CHUNK_PX, CHUNK_PX);
     const ctx = tex.getContext();
-    const regionsByIndex = world.regions;
     for (let y = 0; y < CHUNK_TILES; y++) {
       for (let x = 0; x < CHUNK_TILES; x++) {
         const tx = cx * CHUNK_TILES + x;
         const ty = cy * CHUNK_TILES + y;
         if (tx >= world.cols || ty >= world.rows) continue;
-        drawTile(ctx, world, regionsByIndex, tx, ty, x * TILE_SIZE, y * TILE_SIZE);
+        drawTile(ctx, world, world.regions, tx, ty, x * TILE_SIZE, y * TILE_SIZE);
       }
     }
     tex.refresh();
@@ -68,7 +80,12 @@ export default class WorldRenderer {
   }
 
   /** Create chunks near the camera and free the ones far away. Call every frame (cheap when nothing changes). */
-  update(cam) {
+  update(cam, time = 0) {
+    const flame = Math.floor(time / 220) % 2;
+    if (flame !== this.flame) {
+      this.flame = flame;
+      if (this.lit.size) this.paintBraziers();
+    }
     const view = cam.worldView;
     const margin = CHUNK_PX;
     const x0 = Math.max(0, Math.floor((view.x - margin) / CHUNK_PX));

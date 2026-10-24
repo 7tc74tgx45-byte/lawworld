@@ -613,3 +613,40 @@ Cost $1.85 · 18 min · attempt 2
   - The door-to-encounter wiring reuses the existing, tested encounter code.
 
 **Next:** T10 should add the seasonal tile and tree art, weather particles, the player walk animation and the cat. T11 is the journal. Also consider offline banks for more buildings: only 4 of about 170 can be played without Claude and Obsidian.
+
+## T10 — done — 2026-10-24 03:15:58
+Cost $1.49 · 12 min · attempt 1
+
+**What changed:** The world now has seasonal art, weather that changes by region, a walk-animated student and a cat companion. I couldn't run it in a browser overnight, so none of the drawing has been seen on screen. `npm run build` and `npm test` pass (194 tests, 13 new in `tests/sprites.test.js`).
+
+- **Tiles:** each season has its own grass, flowers, paths, water, fences and tree style.
+  - Spring has blossom and petals.
+  - Summer has dense flowers and glints on the water.
+  - Autumn has fallen leaves and orange or red canopies.
+  - Winter has snow drifts, ice floes, snowy pines and some bare trees.
+  - Sand shores appear where land meets water.
+- **Buildings:** they now have shingled roofs with a chimney, timber corner posts, shuttered windows, framed doors with a step and a roof mark. Flower boxes appear in spring and summer, moss on spring roofs, leaves on autumn roofs and snow on winter roofs. The wall and roof colours still show locked, available, explored or consolidated.
+- **Weather:** each season has its own particles: petals in spring, sun motes in summer, falling leaves and drifting mist in autumn, snow in winter. Each also adds a faint colour tint. The weather follows the season of the nearest region and fades out and in as you cross the bridge between regions.
+- **Player:** a law student with a messenger bag, walking in 4 directions with 2 walk frames plus a standing pose. The frame changes with distance walked, so pushing into a wall doesn't make the legs move.
+- **Cat:** a ginger cat that walks the same path you walked, about a tile behind you. It cuts no corners, runs to catch up if it falls behind, and jumps to you after a teleport.
+  - Standing still, it stands for about 1.6 seconds, then sits and flicks its tail every few seconds.
+  - During an encounter it walks to a free spot beside you and sits.
+  - Its position is saved and restored.
+- **Braziers:** a lit brazier now flickers between two frames.
+
+**Try it:** Run `npm run dev`.
+1. Walk around the hub with WASD. The student's legs should alternate, and the cat should trail you.
+2. Stop. After about 1.5 seconds the cat sits and flicks its tail.
+3. Walk east along the bridge to Contract and watch the petals fade into sun motes. South is Tort (leaves and mist) and north is Public Law (snow).
+4. Compare the buildings in each region: flower boxes in spring and summer, leaves in autumn, snow on the roofs in winter.
+5. Open a door with E. The cat should walk up and sit beside you while the encounter is open.
+
+**Design notes:** - **Where the weather switches:** it follows the nearest region, not the region rectangle, so the change happens mid-bridge and fades rather than snapping. It is easy to switch to the exact border.
+- **Building textures:** they are made on demand per state, side and season (up to 32), so only the ones used get built.
+- **Chunk redraw cost:** the ground chunk redraw is heavier now. I haven't measured it. If scrolling stutters at chunk borders, drop the per-tile detail or cache tile variants.
+- **Cat during overlays:** while the menu or door panel is open the cat keeps following normally. It only goes to sit beside you when an encounter is open.
+- **Pure logic:** `src/logic/anim.js`, `cat.js` and `weather.js` hold the walk frames, cat behaviour and particle maths. The Phaser files only draw them.
+- **Old texture key:** the old `player` texture key no longer exists. Nothing else used it.
+- **Weather and cat are drawn from `GameScene.update`:** they hold no state of their own beyond the save's `cat` position.
+
+**Next:** T11 (journal). Once you've seen the game in the browser, tune the cat's follow distance and speed, and the particle counts, in `CAT` in `src/logic/cat.js` and `WEATHER` in `src/logic/weather.js`.

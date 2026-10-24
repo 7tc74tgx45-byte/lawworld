@@ -15,9 +15,12 @@ import { allDistricts, findSubsection, locateSubsection } from '../logic/curricu
 import { computeStates, isBrazierLit, openGaps } from '../logic/progress.js';
 import { describeDoor } from '../logic/doorInfo.js';
 import { buildWorld } from '../logic/layout.js';
-import { TILE_SIZE, blockedAt, regionAt, moveWithCollision, doorNear, tileCentre } from '../logic/worldQuery.js';
+import { TILE_SIZE, blockedAt, boxBlocked, regionAt, zoneAt, moveWithCollision, doorNear, tileCentre } from '../logic/worldQuery.js';
+import { playerTextureKey, facingFromVector } from '../logic/anim.js';
+import { createCat, updateCat, catFrame, pickBesideSpot } from '../logic/cat.js';
 import { STATE_LABEL } from './palette.js';
 import WorldRenderer from './WorldRenderer.js';
+import Weather from './Weather.js';
 
 const PLAYER_SPEED = 150;
 
@@ -44,8 +47,19 @@ export default class GameScene extends Phaser.Scene {
     const savedOk = hasSave && Number.isFinite(saved.x) && Number.isFinite(saved.y) && !this.boxBlockedAt(saved.x, saved.y);
     const start = savedOk ? { x: saved.x, y: saved.y } : spawn;
 
-    this.player = this.add.image(start.x, start.y, 'player').setOrigin(0.5, 0.9);
     this.facing = savedOk ? saved.facing : 'down';
+    this.walkDist = 0;
+    this.moving = false;
+    this.player = this.add.image(start.x, start.y, playerTextureKey(this.facing, false, 0)).setOrigin(0.5, 0.9);
+
+    // Cat companion: restored from the save when it is close to the player and not inside a wall, else beside the player.
+    const savedCat = this.saveStore.state.cat;
+    const catOk = savedOk && Number.isFinite(savedCat?.x) && Math.hypot(savedCat.x - start.x, savedCat.y - start.y) < 160 && !boxBlocked(world, savedCat.x, savedCat.y, 4);
+    const catStart = catOk ? savedCat : pickBesideSpot(start, (x, y) => boxBlocked(world, x, y, 4));
+    this.cat = createCat(catStart.x, catStart.y);
+    this.catSprite = this.add.image(this.cat.x, this.cat.y, 'cat-sit-0').setOrigin(0.5, 0.9);
+    this.weather = new Weather(this, this.scale.width, this.scale.height);
+
     this.lastSavedPos = { x: Math.round(start.x), y: Math.round(start.y) };
     this.time.addEvent({ delay: 2000, loop: true, callback: () => this.savePosition() });
 
@@ -93,7 +107,26 @@ export default class GameScene extends Phaser.Scene {
     this.refreshStates();
     this.currentRegionId = null;
     this.updateRegion(true);
+    this.updateWeather(true);
     this.renderer.update(this.cameras.main);
+  }
+
+  /** Weather follows the season of the nearest region, so it switches as the player crosses the border (mid-bridge). */
+  updateWeather(instant = false) {
+    const tx = Math.floor(this.player.x / TILE_SIZE);
+    const ty = Math.floor(this.player.y / TILE_SIZE);
+    const region = this.world.regions[zoneAt(this.world, tx, ty)];
+    if (region) this.weather.setSeason(region.season, instant);
+  }
+
+  /** Cat and player sprite frames. The cat sits beside the player while an encounter is open. */
+  animateCharacters(delta, moving) {
+    this.moving = moving;
+    this.player.setTexture(playerTextureKey(this.facing, moving, this.walkDist));
+    const dt = delta / 1000;
+    updateCat(this.cat, dt, this.player, { encounter: this.encounterOpen, blocked: (x, y) => boxBlocked(this.world, x, y, 4) });
+    const f = catFrame(this.cat);
+    this.catSprite.setTexture(f.key).setFlipX(f.flipX).setPosition(this.cat.x, this.cat.y).setDepth(this.cat.y);
   }
 
   boxBlockedAt(x, y) {
@@ -135,7 +168,8 @@ export default class GameScene extends Phaser.Scene {
     if (x === this.lastSavedPos.x && y === this.lastSavedPos.y) return;
     this.lastSavedPos = { x, y };
     const region = this.currentRegionId ?? 'hub';
-    this.saveStore.update((s) => ({ ...s, player: { ...s.player, x, y, region, facing: this.facing } }));
+    const cat = { x: Math.round(this.cat.x), y: Math.round(this.cat.y) };
+    this.saveStore.update((s) => ({ ...s, player: { ...s.player, x, y, region, facing: this.facing }, cat }));
   }
 
   /** E at a door: locked shows the padlock tooltip; otherwise choose a tutor, then the encounter. */
@@ -257,10 +291,12 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  update(_time, delta) {
-    this.renderer.update(this.cameras.main);
+  update(time, delta) {
+    this.renderer.update(this.cameras.main, time);
+    this.weather.update(delta);
     if (this.encounterOpen || isAnyOverlayOpen()) {
       this.prompt.setVisible(false);
+      this.animateCharacters(delta, false);
       return;
     }
     if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
@@ -281,7 +317,8 @@ export default class GameScene extends Phaser.Scene {
       vy *= Math.SQRT1_2;
     }
     if (vx || vy) {
-      this.facing = Math.abs(vy) >= Math.abs(vx) ? (vy < 0 ? 'up' : 'down') : vx < 0 ? 'left' : 'right';
+      this.facing = facingFromVector(vx, vy, this.facing);
+      const before = { x: this.player.x, y: this.player.y };
       // small sub-steps so a slow frame can never skip over a wall
       const dist = (PLAYER_SPEED * Math.min(delta, 50)) / 1000;
       const steps = Math.ceil(dist / 4);
@@ -289,9 +326,15 @@ export default class GameScene extends Phaser.Scene {
         const p = moveWithCollision(this.world, this.player.x, this.player.y, (vx * dist) / steps, (vy * dist) / steps);
         this.player.setPosition(p.x, p.y);
       }
+      this.walkDist += Math.hypot(this.player.x - before.x, this.player.y - before.y); // only real movement counts
     }
+    // walking = actually moved this frame (pushing into a wall stands still)
+    const walking = this.walkDist !== this.lastWalkDist;
+    this.lastWalkDist = this.walkDist;
+    this.animateCharacters(delta, walking);
     this.player.setDepth(this.player.y);
     this.updateRegion();
+    this.updateWeather();
 
     const door = doorNear(this.world, this.player.x, this.player.y, this.facing);
     if (door) {
